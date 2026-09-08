@@ -29,6 +29,7 @@ import { friendlyError } from "@/lib/actionError";
 import { MonthPicker } from "./ui/MonthPicker";
 import { useDismissable } from "@/hooks/useDismissable";
 import { Modal } from "@/components/ui/Modal";
+import FundingSourceSelect from "@/components/ui/FundingSourceSelect";
 
 interface Props {
     staff: Staff[];
@@ -48,6 +49,14 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
     const table = useTableState({ ns: 'pay', defaultSortKey: 'name' });
     const [pageSize, setPageSize] = usePageSize("payroll");
     const [editingAdj, setEditingAdj] = useState<{ empId: string, type: 'bonus' | 'jarima' | 'avans' | 'payment', amount: number, reason: string } | null>(null);
+    // PUL MANBAI — "qaysi kassadan berilyapti". Server ham TALAB qiladi
+    // (`createPayout`, `approvePayrollAdjustment`): manbasiz to'lov balansdan
+    // chiqib ketardi-yu, qaysi hisob kamayganini kassalar jadvalida
+    // ko'rsatib bo'lmasdi.
+    const [payChannelId, setPayChannelId] = useState("");
+    // Avansda pul TASDIQDA chiqadi (yozilganda emas) — shuning uchun manba
+    // ham o'sha paytda so'raladi, alohida kichik modalda.
+    const [approvingAvans, setApprovingAvans] = useState<{ id: string; who: string; amount: number } | null>(null);
     const [adjustmentsList, setAdjustmentsList] = useState<PayrollAdjustment[]>([]);
     // REAL berilgan pullar (Payout jadvali) — majburiyatdan alohida o'qiladi.
     // AVANS-PAYOUT HAM SHU YERDA. Ilgari u chiqarib tashlanardi va avans
@@ -390,7 +399,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                         <HandCoins size={12} /> Avans
                     </button>
                     <button
-                        onClick={() => setEditingAdj({ empId: r.employeeId, type: "payment", amount: r.remainingBalance, reason: "Maosh to'lovi" })}
+                        onClick={() => { setPayChannelId(""); setEditingAdj({ empId: r.employeeId, type: "payment", amount: r.remainingBalance, reason: "Maosh to'lovi" }); }}
                         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-meta font-semibold"
                         style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}
                     >
@@ -416,17 +425,37 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
 
     const staffNameOf = (id: string) => staff.find(x => x.id === id)?.name ?? '—';
 
-    const handleApproveAdj = async (id: string) => {
+    const handleApproveAdj = async (id: string, channelId?: string) => {
         setBusyAdj(id);
         try {
-            await approvePayrollAdjustment(id);
+            await approvePayrollAdjustment(id, channelId ? { channelId } : undefined);
             toast.success("Tuzatma tasdiqlandi");
+            setApprovingAvans(null);
+            setPayChannelId("");
             await loadMonthlyData();
         } catch (e) {
             toast.error(friendlyError(e) || "Tasdiqlab bo'lmadi");
         } finally {
             setBusyAdj(null);
         }
+    };
+
+    /**
+     * Tasdiqlash tugmasi. AVANS — real pul chiqishi, shuning uchun avval
+     * manba so'raladi; qolgan turlarda (bonus/jarima) kassadan hech narsa
+     * chiqmaydi va qo'shimcha savol berilmaydi.
+     */
+    const startApproveAdj = (a: { id: string; employeeId: string; amount: unknown; adjustmentType: string }) => {
+        if (a.adjustmentType === "avans") {
+            setPayChannelId("");
+            setApprovingAvans({
+                id: a.id,
+                who: staffNameOf(a.employeeId),
+                amount: adjustmentMagnitude(a.amount as never),
+            });
+            return;
+        }
+        void handleApproveAdj(a.id);
     };
 
     const handleDeleteAdj = async (id: string) => {
@@ -451,6 +480,12 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
             return;
         }
         if (savingAdj) return;
+        // Manba faqat REAL pul chiqadigan yo'lda kerak (`payment`). Avansda
+        // pul tasdiqda chiqadi, bonus/jarima esa majburiyat yozuvi.
+        if (editingAdj.type === 'payment' && !payChannelId) {
+            toast.error("Pul manbaini tanlang — oylik qaysi kassadan berilmoqda");
+            return;
+        }
 
         setSavingAdj(true);
         try {
@@ -461,6 +496,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                     employeeId: editingAdj.empId,
                     month,
                     amount: Math.abs(editingAdj.amount),
+                    channelId: payChannelId,
                     note: editingAdj.reason || "Maosh to'lovi",
                 });
             } else {
@@ -473,6 +509,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                 });
             }
             setEditingAdj(null);
+            setPayChannelId("");
             loadMonthlyData();
         } catch (e) {
             console.error(e);
@@ -683,7 +720,7 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                                     </span>
                                     {isApprover ? (
                                         <div className="flex gap-1.5">
-                                            <button disabled={busy} onClick={() => handleApproveAdj(a.id)}
+                                            <button disabled={busy} onClick={() => startApproveAdj({ id: a.id, employeeId: a.employeeId, amount: a.amount, adjustmentType: type })}
                                                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-meta font-semibold disabled:opacity-50"
                                                 style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid var(--success-border)" }}>
                                                 <CheckCircle2 size={12} /> Tasdiqlash
@@ -722,7 +759,11 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                     editingAdj?.type === "jarima" ? "Jarima yozish" :
                     editingAdj?.type === "avans" ? "Avans berish" : "Maosh to'lovi"
                 }
-                description="Miqdor va sababni kiriting"
+                description={
+                    editingAdj?.type === "payment"
+                        ? "Manba, miqdor va izohni kiriting — pul shu kassadan chiqadi"
+                        : "Miqdor va sababni kiriting"
+                }
                 footer={
                     <div className="flex gap-3">
                         <Button variant="secondary" size="md" onClick={() => setEditingAdj(null)} disabled={savingAdj} className="flex-1">
@@ -746,6 +787,24 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                                 onChange={e => setEditingAdj({ ...editingAdj, amount: Number(ungroupDigits(e.target.value)) })}
                                 placeholder="0" />
                         </div>
+                        {/* PUL MANBAI — faqat real to'lovda. Bu ekranning
+                            ikkinchi savoli: xodim allaqachon ma'lum (qator),
+                            manba esa shu yerda tanlanadi va `Payout.channelId`
+                            ga yoziladi. Server ham talab qiladi — forma
+                            chetlab o'tilsa `createPayout` rad etadi. */}
+                        {editingAdj.type === "payment" && (
+                            <div>
+                                <label htmlFor="adj-channel" className="block text-meta font-semibold mb-1.5 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                                    Pul manbai (qaysi kassadan)
+                                </label>
+                                <FundingSourceSelect
+                                    id="adj-channel"
+                                    value={payChannelId}
+                                    onChange={setPayChannelId}
+                                    aria-required
+                                />
+                            </div>
+                        )}
                         <div>
                             <label htmlFor="adj-reason" className="block text-meta font-semibold mb-1.5 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
                                 Sabab / Izoh
@@ -755,6 +814,54 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                                 value={editingAdj.reason}
                                 onChange={e => setEditingAdj({ ...editingAdj, reason: e.target.value })}
                                 placeholder="Tafsilotlarni kiriting..." />
+                        </div>
+                    </div>
+                )}
+            </Modal>
+
+            {/* AVANS TASDIG'I — pul aynan shu bosishda kassadan chiqadi
+                (`approvePayrollAdjustment` Payout + jurnal yozadi), shuning
+                uchun manba ham shu yerda so'raladi. Ilgari tugma to'g'ridan
+                to'g'ri tasdiqlardi va pul "qaysi kassadan" degan savol
+                javobsiz qolardi. */}
+            <Modal
+                open={Boolean(approvingAvans)}
+                onClose={() => setApprovingAvans(null)}
+                dismissable={!busyAdj}
+                size="sm"
+                title="Avans tasdig'i"
+                description="Tasdiqlansa pul shu zahoti kassadan chiqadi"
+                footer={
+                    <div className="flex gap-3">
+                        <Button variant="secondary" size="md" onClick={() => setApprovingAvans(null)} disabled={Boolean(busyAdj)} className="flex-1">
+                            Bekor qilish
+                        </Button>
+                        <Button
+                            variant="primary" size="md" className="flex-1"
+                            disabled={Boolean(busyAdj) || !payChannelId}
+                            onClick={() => approvingAvans && handleApproveAdj(approvingAvans.id, payChannelId)}
+                        >
+                            <CheckCircle2 size={15} /> {busyAdj ? "Tasdiqlanmoqda…" : "Tasdiqlash"}
+                        </Button>
+                    </div>
+                }
+            >
+                {approvingAvans && (
+                    <div className="space-y-4">
+                        <p className="text-body" style={{ color: "var(--text)" }}>
+                            <b>{approvingAvans.who}</b> uchun{" "}
+                            <span className="font-mono tabular-nums">{formatNum(approvingAvans.amount)}</span> so&apos;m avans.
+                        </p>
+                        <div>
+                            <label htmlFor="avans-channel" className="block text-meta font-semibold mb-1.5 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+                                Pul manbai (qaysi kassadan)
+                            </label>
+                            <FundingSourceSelect
+                                id="avans-channel"
+                                value={payChannelId}
+                                onChange={setPayChannelId}
+                                aria-required
+                            />
                         </div>
                     </div>
                 )}

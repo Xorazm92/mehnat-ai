@@ -1014,6 +1014,14 @@ model Payout {
   month         String // "YYYY-MM" — qaysi oy majburiyati uchun
   amount        Decimal            @db.Decimal(12, 2) // har doim musbat
   paymentMethod String             @default("naqd") // 'naqd' | 'plastik' | 'schyot' | 'terminal' | 'boshqa'
+
+  /// Pul QAYSI kassadan chiqdi (DisbursementChannel.id) — "qaysi manbadan
+  /// qaysi xodimga" savolining birinchi yarmi (ikkinchisi `employeeId`).
+  /// FK EMAS: `KassaEntry.channelId` uslubiga mos (kanal o'chirilsa tarixiy
+  /// to'lov yozuvi yo'qolmasin). Eski qatorlarda NULL — ular kassalar
+  /// jadvalida "Kanali ko'rsatilmagan" qatorida turadi
+  /// (`scripts/backfill-payout-channel.ts` ularni bog'laydi).
+  channelId     String?
   note          String?
   paidAt        DateTime           @default(now())
   createdBy     String?
@@ -1028,6 +1036,7 @@ model Payout {
   @@index([adjustmentId])
   @@index([paidAt])
   @@index([deletedAt])
+  @@index([channelId])
 }
 
 // =====================================================

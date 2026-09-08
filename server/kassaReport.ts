@@ -178,6 +178,14 @@ export async function getCashDeskReport(period?: string): Promise<CashDeskReport
 // summasi bir xil bo'lishi kerak, chunki har kassa yozuvi jurnalga aynan
 // o'z summasi bilan tushadi (`server/kassa.ts` postExpenseLegs).
 //
+// OYLIK — `Payout` DAN QO'SHILADI. U kassa moddasi emas (`KassaEntry` da
+// "Oylik" toifasi ataylab taqiqlangan, `lib/kassaCategories.ts`), lekin PUL
+// KASSADAN CHIQADI va balans uni chiqim deb sanaydi (`lib/balance.ts`
+// `outflowPayroll`). Shu qator bo'lmasa ekran "Chiqim, avgust" ni balansdan
+// KAM ko'rsatardi va foydalanuvchi kassadan yo'qolgan pulni moddalar
+// ro'yxatidan topa olmasdi. Ikki marta sanash xavfi yo'q: manba boshqa
+// jadval va "Oylik" toifasi kassa yozuvida umuman yozilmaydi.
+//
 // MIJOZ TO'LOVLARI ATAYIN QO'SHILMAGAN va alohida qator bo'lib ko'rsatiladi.
 // Ular `Payment` jadvalida yashaydi (`/kassa/kirim`), kassa moddasi emas —
 // bittasiga qo'shib yuborilsa, "Firma to'lovi" moddasi bir xil pulni ikki
@@ -211,7 +219,7 @@ export async function getCategoryBreakdown(period?: string): Promise<CategoryBre
   const from = new Date(y, m - 1, 1);
   const to = new Date(y, m, 1);
 
-  const [grouped, payments, pendingRows] = await Promise.all([
+  const [grouped, payments, pendingRows, payouts] = await Promise.all([
     // FAQAT TASDIQLANGAN. Ilgari `status: { not: "rejected" }` edi, ya'ni
     // tasdiq kutayotgan xarajat ham qo'shilardi — balans bloki esa faqat
     // tasdiqlanganini sanaydi (`lib/balance.ts`). Natijada BITTA ekranda
@@ -236,6 +244,14 @@ export async function getCategoryBreakdown(period?: string): Promise<CategoryBre
       _count: true,
       _sum: { amount: true },
     }),
+    // Oylik/avans — kassadan chiqqan real pul (yuqoridagi izohga qarang).
+    // Sana bo'yicha: BERILGAN kun (`paidAt`), majburiyat oyi (`month`) emas —
+    // modda kesimi "shu oyda kassadan nima chiqdi" ni ko'rsatadi.
+    prisma.payout.aggregate({
+      where: { deletedAt: null, paidAt: { gte: from, lt: to } },
+      _count: true,
+      _sum: { amount: true },
+    }),
   ]);
 
   const rows: CategoryRow[] = grouped.map((g) => ({
@@ -249,7 +265,20 @@ export async function getCategoryBreakdown(period?: string): Promise<CategoryBre
     rows.filter((r) => r.type === t).sort((a, b) => b.amount - a.amount);
 
   const income = pick("income");
+  const payoutAmount = Number(payouts._sum.amount ?? 0);
   const expense = pick("expense");
+  if (payoutAmount > 0) {
+    // Nomi ataylab "Oylik (xodimlarga)": kassa toifalari ro'yxatida bunday
+    // yozuv yo'q, ya'ni uni `KassaEntry` moddasi bilan chalkashtirib
+    // bo'lmaydi. Kesim `/kassa/chiqim → Oylik` tabida (xodim va manba bo'yicha).
+    expense.push({
+      category: "Oylik (xodimlarga)",
+      type: "expense",
+      count: payouts._count,
+      amount: payoutAmount,
+    });
+    expense.sort((a, b) => b.amount - a.amount);
+  }
 
   return serialize({
     period: key,

@@ -22,7 +22,7 @@ const { createPayout, softDeletePayout, getPayouts } = await import("@/server/pa
 const TAG = `vitest-payout-${Date.now()}`;
 const MONTH = "2099-05-01"; // boshqa test fayllari bilan to'qnashmaydigan davr
 const MONTH_KEY = "2099-05";
-const ids = { employee: "", company: "" };
+const ids = { employee: "", company: "", channel: "" };
 
 beforeAll(async () => {
   const employee = await prisma.user.create({
@@ -49,6 +49,15 @@ beforeAll(async () => {
     select: { id: true },
   });
   ids.company = company.id;
+
+  // PUL MANBAI. `createPayout` uni TALAB qiladi: oylik qaysi kassadan
+  // chiqqani jurnalga (CASH oyog'i `channelId`) yoziladi va kassalar
+  // jadvali shu o'lchovdan o'qiydi.
+  const channel = await prisma.disbursementChannel.create({
+    data: { type: "cash", label: `${TAG} kassa`, isActive: true },
+    select: { id: true },
+  });
+  ids.channel = channel.id;
 });
 
 afterAll(async () => {
@@ -63,6 +72,7 @@ afterAll(async () => {
   await prisma.payrollAdjustment.deleteMany({ where: { employeeId: ids.employee } });
   await prisma.auditLog.deleteMany({ where: { userId: ids.employee } });
   await prisma.company.deleteMany({ where: { id: ids.company } });
+  await prisma.disbursementChannel.deleteMany({ where: { id: ids.channel } });
   await prisma.user.deleteMany({ where: { id: ids.employee } });
   await prisma.$disconnect();
 });
@@ -87,7 +97,7 @@ describe("payout lifecycle", () => {
 
   it("blocks a payout with no approved obligation for that month", async () => {
     await expect(
-      createPayout({ employeeId: ids.employee, month: "2099-06", amount: 100_000 })
+      createPayout({ employeeId: ids.employee, month: "2099-06", amount: 100_000, channelId: ids.channel })
     ).rejects.toThrow(/majburiyati yo'q/);
   });
 
@@ -96,6 +106,7 @@ describe("payout lifecycle", () => {
       employeeId: ids.employee,
       month: MONTH_KEY,
       amount: 800_000,
+      channelId: ids.channel,
       note: "qisman to'lov",
     });
     expect(Number(payout.amount)).toBe(800_000);
@@ -110,10 +121,29 @@ describe("payout lifecycle", () => {
     expect(credit).toBe(800_000);
     expect(legs.some((l) => l.accountId === "SALARY_EXPENSE" && Number(l.debit) === 800_000)).toBe(true);
     expect(legs.some((l) => l.accountId === "CASH" && Number(l.credit) === 800_000)).toBe(true);
+
+    // "QAYSI MANBADAN QAYSI XODIMGA" — ikkala o'lchov ham jurnalda.
+    // CASH oyog'ida kanal bo'lmasa `getCashDeskReport` to'lovni "Kanali
+    // ko'rsatilmagan" qatoriga qo'yardi va qaysi kassa kamaygani noma'lum
+    // qolardi; SALARY_EXPENSE oyog'idagi `subjectId` esa xodim kesimini
+    // beradi.
+    expect(payout.channelId).toBe(ids.channel);
+    const cashLeg = legs.find((l) => l.accountId === "CASH")!;
+    expect(cashLeg.channelId).toBe(ids.channel);
+    const salaryLeg = legs.find((l) => l.accountId === "SALARY_EXPENSE")!;
+    expect(salaryLeg.subjectId).toBe(ids.employee);
+  });
+
+  it("blocks a payout with no funding source", async () => {
+    await expect(
+      // @ts-expect-error — manbasiz chaqiruv tipda ham taqiqlangan; bu yerda
+      // ATAYIN yuboriladi: forma chetlab o'tilsa ham server rad etishi kerak.
+      createPayout({ employeeId: ids.employee, month: MONTH_KEY, amount: 100_000 })
+    ).rejects.toThrow(/manba/i);
   });
 
   it("pays out the remaining obligation in full", async () => {
-    await createPayout({ employeeId: ids.employee, month: MONTH_KEY, amount: 1_200_000 });
+    await createPayout({ employeeId: ids.employee, month: MONTH_KEY, amount: 1_200_000, channelId: ids.channel });
 
     const paid = await prisma.payout.aggregate({
       where: { employeeId: ids.employee, month: MONTH_KEY, deletedAt: null },
@@ -124,7 +154,7 @@ describe("payout lifecycle", () => {
 
   it("blocks any payout beyond the obligation (double payout)", async () => {
     await expect(
-      createPayout({ employeeId: ids.employee, month: MONTH_KEY, amount: 1 })
+      createPayout({ employeeId: ids.employee, month: MONTH_KEY, amount: 1, channelId: ids.channel })
     ).rejects.toThrow(/Ortiqcha to'lov bloklandi/);
   });
 
@@ -147,7 +177,7 @@ describe("payout lifecycle", () => {
     expect(net).toBe(0);
 
     // Endi 800k qayta to'lash mumkin (majburiyat bo'shadi).
-    const again = await createPayout({ employeeId: ids.employee, month: MONTH_KEY, amount: 800_000 });
+    const again = await createPayout({ employeeId: ids.employee, month: MONTH_KEY, amount: 800_000, channelId: ids.channel });
     expect(Number(again.amount)).toBe(800_000);
   });
 
@@ -190,17 +220,17 @@ describe("avans oylikdan ayiriladi", () => {
       amount: -500_000, // UI konventsiyasi: avans manfiy yuboriladi
       reason: "vitest avans",
     });
-    await approvePayrollAdjustment(adj.id);
+    await approvePayrollAdjustment(adj.id, { channelId: ids.channel });
 
     expect(await paidTotal()).toBe(500_000);
   });
 
   it("qolgan majburiyatdan avans ayirilgan (2 000 000 − 500 000)", async () => {
     await expect(
-      createPayout({ employeeId: ids.employee, month: AVANS_KEY, amount: 1_500_001 })
+      createPayout({ employeeId: ids.employee, month: AVANS_KEY, amount: 1_500_001, channelId: ids.channel })
     ).rejects.toThrow(/Ortiqcha to'lov bloklandi/);
 
-    await createPayout({ employeeId: ids.employee, month: AVANS_KEY, amount: 1_500_000 });
+    await createPayout({ employeeId: ids.employee, month: AVANS_KEY, amount: 1_500_000, channelId: ids.channel });
 
     // Jami berilgan = majburiyat. Avans ustiga qo'shimcha pul chiqmadi.
     expect(await paidTotal()).toBe(2_000_000);
@@ -208,7 +238,7 @@ describe("avans oylikdan ayiriladi", () => {
 
   it("majburiyat to'lingandan keyin bir tiyin ham o'tmaydi", async () => {
     await expect(
-      createPayout({ employeeId: ids.employee, month: AVANS_KEY, amount: 1 })
+      createPayout({ employeeId: ids.employee, month: AVANS_KEY, amount: 1, channelId: ids.channel })
     ).rejects.toThrow(/Ortiqcha to'lov bloklandi/);
   });
 });
@@ -247,10 +277,10 @@ describe("qo'lda bonus va jarima majburiyatni o'zgartiradi", () => {
 
     // 2 000 000 + 300 000 − 100 000 = 2 200 000
     await expect(
-      createPayout({ employeeId: ids.employee, month: KEY, amount: 2_200_001 })
+      createPayout({ employeeId: ids.employee, month: KEY, amount: 2_200_001, channelId: ids.channel })
     ).rejects.toThrow(/Ortiqcha to'lov bloklandi/);
 
-    const payout = await createPayout({ employeeId: ids.employee, month: KEY, amount: 2_200_000 });
+    const payout = await createPayout({ employeeId: ids.employee, month: KEY, amount: 2_200_000, channelId: ids.channel });
     expect(Number(payout.amount)).toBe(2_200_000);
   });
 
@@ -264,7 +294,7 @@ describe("qo'lda bonus va jarima majburiyatni o'zgartiradi", () => {
     });
 
     await expect(
-      createPayout({ employeeId: ids.employee, month: KEY, amount: 1 })
+      createPayout({ employeeId: ids.employee, month: KEY, amount: 1, channelId: ids.channel })
     ).rejects.toThrow(/Ortiqcha to'lov bloklandi/);
   });
 });

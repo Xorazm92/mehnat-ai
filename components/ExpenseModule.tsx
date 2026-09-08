@@ -38,6 +38,29 @@ const EXP_STATUS: Record<string, { label: string; tone: BadgeTone }> = {
 // Korxona lug'atini o'qib bo'lmaganda ishlaydigan zaxira ro'yxat.
 const FALLBACK_CATEGORIES = ["Arenda", "Soliqlar", "Bank usluga", "Ovqatga", "Kommunal (svet)", "Texnika", "Marketing", "Boshqa xarajatlar"];
 
+/**
+ * OYLIK — toifalar ro'yxatidagi MAXSUS band.
+ *
+ * U korxona lug'atidan KELMAYDI va kelmasligi ham kerak: `lib/kassaCategories.ts`
+ * oylikni ro'yxatdan ataylab chiqarib tashlaydi, `server/kassa.ts` esa oylik
+ * toifali `KassaEntry` yozilishini bloklaydi — aks holda bitta to'lov
+ * balansda ikki marta hisoblanardi (`Payout` + kassa yozuvi).
+ *
+ * Shuning uchun bu band FORMA darajasida qo'shiladi va tanlanganda yozuv
+ * boshqa yo'ldan ketadi: `createPayout` (xodim, qaysi oy, manba, majburiyat
+ * tekshiruvi). Ya'ni foydalanuvchi oylikni kassa chiqimi ekranidan yozadi,
+ * lekin ma'lumot to'g'ri jadvalga tushadi.
+ */
+const SALARY_CATEGORY = "Oylik";
+
+/** Oxirgi 12 oy — "qaysi oy uchun" tanlagichi. */
+function recentMonths(count = 12): string[] {
+  const out: string[] = [];
+  const now = new Date();
+  for (let i = 0; i < count; i++) out.push(periodKeyOf(new Date(now.getFullYear(), now.getMonth() - i, 1)));
+  return out;
+}
+
 interface ExpenseModuleProps {
     expenses: Expense[];
     lang: Language;
@@ -50,12 +73,28 @@ interface ExpenseModuleProps {
      */
     categories?: string[];
     onSaveExpense: (expense: Partial<Expense>) => Promise<void>;
+    /**
+     * OYLIK YO'LI. Berilsa toifalar ro'yxatida "Oylik" paydo bo'ladi; u
+     * tanlanganda forma xodim va "qaysi oy uchun" maydonlarini so'raydi va
+     * saqlash `onSavePayout` orqali `Payout` yozadi (`KassaEntry` emas).
+     * Berilmasa forma o'zgarishsiz — modul boshqa ekranlarda ham ishlaydi.
+     */
+    payroll?: {
+        employees: { id: string; fullName: string }[];
+        onSavePayout: (data: {
+            employeeId: string;
+            month: string;
+            amount: number;
+            channelId: string;
+            note?: string;
+        }) => Promise<void>;
+    };
     onDeleteExpense?: (id: string) => Promise<void>;
     onApproveExpense?: (id: string) => Promise<void>;
     onRejectExpense?: (id: string) => Promise<void>;
 }
 
-const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole = '', balance, categories, onSaveExpense, onDeleteExpense, onApproveExpense, onRejectExpense }) => {
+const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole = '', balance, categories, payroll, onSaveExpense, onDeleteExpense, onApproveExpense, onRejectExpense }) => {
   const confirm = useConfirm();
     const t = translations[lang];
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -77,6 +116,13 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const [editingExpense, setEditingExpense] = useState<Partial<Expense> | null>(null);
+    // Oylik yo'lining qo'shimcha maydonlari — `Expense` tipida bunday maydon
+    // yo'q va bo'lmasligi ham kerak (yozuv `Payout` ga ketadi).
+    const [salaryFor, setSalaryFor] = useState<{ employeeId: string; month: string }>({
+        employeeId: "",
+        month: periodKeyOf(new Date()),
+    });
+    const [saving, setSaving] = useState(false);
 
     const filteredExpenses = useMemo(() => {
         const q = searchTerm.toLowerCase();
@@ -197,10 +243,30 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
     // Saqlash hodisadan AJRATILDI: tugma modal pastida (forma ichida emas)
     // va Ctrl+Enter ham shu yo'ldan o'tadi.
     const saveExpense = async () => {
-        if (!editingExpense) return;
-        await onSaveExpense(editingExpense);
-        setIsModalOpen(false);
-        setEditingExpense(null);
+        if (!editingExpense || saving) return;
+        setSaving(true);
+        try {
+            if (isSalary) {
+                // OYLIK — kassa yozuvi emas. Xodim/oy/manba serverda ham
+                // tekshiriladi (`createPayout`): majburiyat tasdiqlanmagan
+                // bo'lsa yoki manba bo'lmasa yozuv rad etiladi.
+                if (!salaryFor.employeeId) throw new Error("Xodimni tanlang");
+                if (!editingExpense.channelId) throw new Error("Pul manbaini tanlang");
+                await payroll!.onSavePayout({
+                    employeeId: salaryFor.employeeId,
+                    month: salaryFor.month,
+                    amount: Number(editingExpense.amount || 0),
+                    channelId: editingExpense.channelId,
+                    note: editingExpense.description || undefined,
+                });
+            } else {
+                await onSaveExpense(editingExpense);
+            }
+            setIsModalOpen(false);
+            setEditingExpense(null);
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleSave = async (e: React.FormEvent) => {
@@ -213,12 +279,32 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
     // undan tanlangan xarajat hisobotlarda begona modda bo'lib qolardi.
     const categoryOptions = useMemo(() => {
         const base = (categories && categories.length > 0 ? categories : FALLBACK_CATEGORIES).slice();
+        // "Oylik" — faqat YANGI yozuvda. Mavjud kassa xarajatini oylikka
+        // aylantirib bo'lmaydi: u boshqa jadvalda yashaydi, ya'ni "tahrir"
+        // emas, ko'chirish bo'lardi.
+        if (payroll && !editingExpense?.id) base.unshift(SALARY_CATEGORY);
         // Tahrirlanayotgan yozuvning o'z toifasi ham ro'yxatda tursin —
         // aks holda eski/begona toifa select'dan "yo'qolardi".
         const current = editingExpense?.category;
         if (current && !base.includes(current)) base.unshift(current);
         return base;
-    }, [categories, editingExpense?.category]);
+    }, [categories, editingExpense?.category, editingExpense?.id, payroll]);
+
+    /**
+     * Yangi yozuvning standart toifasi — HECH QACHON "Oylik".
+     * "Oylik" ro'yxatning boshida turadi (topilishi oson bo'lsin), lekin
+     * standart bo'lib qolsa forma har ochilganda oylik rejimida ochilardi.
+     */
+    const defaultCategory = useMemo(
+        () => categoryOptions.find((c) => c !== SALARY_CATEGORY) ?? categoryOptions[0] ?? '',
+        [categoryOptions]
+    );
+
+    /** Forma hozir oylik rejimidami — bir necha joyda kerak. */
+    const isSalary = Boolean(payroll) && !editingExpense?.id
+        && (editingExpense?.category ?? defaultCategory) === SALARY_CATEGORY;
+
+    const monthOptions = useMemo(() => recentMonths(), []);
 
     return (
         <div className="space-y-4 animate-fade-in pb-20">
@@ -312,7 +398,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                 />
                 {/* "Yangi xarajat" — YARATISH amali, `danger` (qizil) emas:
                     qizil holat rangi xato/o'chirish ma'nosida qolishi kerak. */}
-                <Button variant="primary" size="md" onClick={() => { setEditingExpense({ date: todayKey(), category: categoryOptions[0] || '', amount: 0 }); setIsModalOpen(true); }} className="whitespace-nowrap">
+                <Button variant="primary" size="md" onClick={() => { setSalaryFor({ employeeId: '', month: periodKeyOf(new Date()) }); setEditingExpense({ date: todayKey(), category: defaultCategory, amount: 0 }); setIsModalOpen(true); }} className="whitespace-nowrap">
                     <Plus size={16} />
                     <span>Yangi xarajat</span>
                 </Button>
@@ -464,15 +550,19 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                 open={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 size="lg"
-                title={editingExpense?.id ? 'Xarajatni tahrirlash' : 'Xarajatni kiritish'}
-                description="Tranzaksiya tafsilotlarini kiriting."
+                title={editingExpense?.id ? 'Xarajatni tahrirlash' : isSalary ? "Oylik to'lovi" : 'Xarajatni kiritish'}
+                description={
+                    isSalary
+                        ? "Xodim, manba va qaysi oy uchun — to'lov bugungi sana bilan yoziladi"
+                        : "Tranzaksiya tafsilotlarini kiriting."
+                }
                 footer={
                     <>
                         <Button type="button" variant="secondary" size="md" onClick={() => setIsModalOpen(false)}>
                             {t.cancel}
                         </Button>
-                        <Button type="submit" form={EXPENSE_FORM_ID} variant="primary" size="md">
-                            Saqlash
+                        <Button type="submit" form={EXPENSE_FORM_ID} variant="primary" size="md" disabled={saving}>
+                            {saving ? 'Saqlanmoqda…' : 'Saqlash'}
                         </Button>
                     </>
                 }
@@ -483,6 +573,19 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                     onKeyDown={submitOnCtrlEnter(() => { void saveExpense(); })}
                     className="space-y-3"
                 >
+                    {/* Oylik yo'lining SHARTI ochiq aytiladi: server uni
+                        baribir tekshiradi (`createPayout` → majburiyat
+                        yo'q bo'lsa rad etadi), lekin xatoni saqlashdan
+                        KEYIN ko'rish foydalanuvchini boshi berk ko'chaga
+                        olib borardi. */}
+                    {isSalary && (
+                        <p className="text-meta p-2.5 rounded-lg" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)", color: "var(--text-secondary)" }}>
+                            Oylik kassa xarajati sifatida emas, <b>to&apos;lov (Payout)</b> sifatida
+                            yoziladi — balansda ikki marta hisoblanmasligi uchun. Shu oy uchun
+                            oylik <b>/payroll</b> da tasdiqlangan bo&apos;lishi shart, aks holda
+                            saqlash rad etiladi.
+                        </p>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <Field label={t.amount} required>
                             <MoneyField
@@ -491,21 +594,52 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                                 required
                             />
                         </Field>
-                        <Field label={t.date} required>
-                            <DateField
-                                value={editingExpense?.date || ''}
-                                onChange={(v) => setEditingExpense(prev => ({ ...prev, date: v }))}
-                                required
-                            />
-                        </Field>
+                        {/* OYLIKDA SANA O'RNIGA — "qaysi oy uchun".
+                            `Payout` da ikki xil vaqt bor: BERILGAN kun
+                            (`paidAt`, har doim hozir — `/payroll` dagi
+                            "To'lash" ham shunday) va MAJBURIYAT oyi
+                            (`month`). Kassa xarajatida esa bitta sana.
+                            Ikkalasini bitta maydonga tiqish "qaysi oyning
+                            oyligi?" savolini javobsiz qoldirardi. */}
+                        {isSalary ? (
+                            <Field label="Qaysi oy uchun" required>
+                                <Select
+                                    value={salaryFor.month}
+                                    onChange={(e) => setSalaryFor(prev => ({ ...prev, month: e.target.value }))}
+                                >
+                                    {monthOptions.map(m => <option key={m} value={m}>{m}</option>)}
+                                </Select>
+                            </Field>
+                        ) : (
+                            <Field label={t.date} required>
+                                <DateField
+                                    value={editingExpense?.date || ''}
+                                    onChange={(v) => setEditingExpense(prev => ({ ...prev, date: v }))}
+                                    required
+                                />
+                            </Field>
+                        )}
                         <Field label={t.category} required>
                             <Select
-                                value={editingExpense?.category || categoryOptions[0] || ''}
+                                value={editingExpense?.category || defaultCategory}
                                 onChange={(e) => setEditingExpense(prev => ({ ...prev, category: e.target.value }))}
                             >
                                 {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
                             </Select>
                         </Field>
+                        {isSalary && (
+                            <Field label="Xodim" required>
+                                <Select
+                                    value={salaryFor.employeeId}
+                                    onChange={(e) => setSalaryFor(prev => ({ ...prev, employeeId: e.target.value }))}
+                                >
+                                    <option value="">Xodimni tanlang…</option>
+                                    {payroll!.employees.map(emp => (
+                                        <option key={emp.id} value={emp.id}>{emp.fullName}</option>
+                                    ))}
+                                </Select>
+                            </Field>
+                        )}
                         {/* Pul MANBAI — "to'lov usuli" dan farqli: manba
                             KIMNING hisobidan chiqqanini beradi. Eski
                             "To'lov usuli" selecti bazada yo'q maydonni

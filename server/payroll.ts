@@ -6,6 +6,8 @@ import { auth } from "@/lib/auth";
 import { isSeniorRole } from "@/lib/platform/permissions";
 import { staffScopeFilter } from "@/lib/platform/access";
 import { assertSufficientFunds } from "@/lib/balance";
+import { assertFundingSource } from "@/server/fundingSources";
+import { PAYOUT_METHOD_BY_CHANNEL, normalizeChannelType } from "@/lib/transitChannels";
 import { serializable } from "@/lib/tx";
 import { assertPeriodOpen } from "@/lib/periodLock";
 import { ACCOUNTS, postLedger } from "@/lib/ledger";
@@ -118,7 +120,13 @@ export async function createPayrollAdjustment(data: {
   return serialize(created);
 }
 
-export async function approvePayrollAdjustment(id: string) {
+/**
+ * @param opts.channelId — AVANS tasdig'i uchun MAJBURIY: avans tasdiqlanishi
+ *   real pul berish (Payout), ya'ni qaysi kassadan chiqqani yozilishi kerak.
+ *   Boshqa turlarda (bonus/jarima/manual) pul harakati yo'q — manba ham
+ *   so'ralmaydi. `createPayout` bilan bir xil qoida (server/payouts.ts).
+ */
+export async function approvePayrollAdjustment(id: string, opts?: { channelId?: string }) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
@@ -135,6 +143,26 @@ export async function approvePayrollAdjustment(id: string) {
   await assertPeriodOpen(prisma, existing.month, "oylik tuzatmasi");
 
   const amountAbs = adjustmentMagnitude(existing.amount);
+
+  // MANBA — faqat avansda (pul chiqadigan yagona shox). Tekshiruv
+  // tranzaksiyadan OLDIN: kanal yo'q bo'lsa hech narsa yozilmasin.
+  const isCashOut = existing.adjustmentType === "avans";
+  const channelId = opts?.channelId?.trim() || null;
+  let channelLabel: string | null = null;
+  let avansMethod = "naqd";
+  if (isCashOut) {
+    if (!channelId) {
+      throw new Error("Pul manbaini tanlang — avans qaysi kassadan berilmoqda");
+    }
+    await assertFundingSource(channelId);
+    const channel = await prisma.disbursementChannel.findUnique({
+      where: { id: channelId },
+      select: { label: true, type: true },
+    });
+    channelLabel = channel?.label ?? null;
+    const kind = channel ? normalizeChannelType(channel.type) : null;
+    if (kind) avansMethod = PAYOUT_METHOD_BY_CHANNEL[kind];
+  }
 
   // Avans tasdig'i = REAL pul berish. Balans tekshiriladi (admin o'tkaza oladi,
   // minus balans holati audit logga tushadi).
@@ -170,21 +198,25 @@ export async function approvePayrollAdjustment(id: string) {
           adjustmentId: id,
           month: existing.month.slice(0, 7),
           amount: new Prisma.Decimal(amountAbs),
-          paymentMethod: "naqd",
+          paymentMethod: avansMethod,
+          channelId,
           note: `Avans tasdig'i: ${existing.reason}`,
           createdBy: session.user.id,
         },
       });
+      // Manba (CASH oyog'i) va xodim (SALARY_EXPENSE oyog'i) — `createPayout`
+      // dagi bilan bir xil o'lchovlar, aks holda avans jurnalda "kanalsiz"
+      // bo'lib qolardi va kassalar jadvali kamaygan hisobni ko'rsatmasdi.
       await postLedger(tx, {
         legs: [
-          { accountId: ACCOUNTS.SALARY_EXPENSE, debit: amountAbs },
-          { accountId: ACCOUNTS.CASH, credit: amountAbs },
+          { accountId: ACCOUNTS.SALARY_EXPENSE, debit: amountAbs, subjectId: existing.employeeId },
+          { accountId: ACCOUNTS.CASH, credit: amountAbs, channelId },
         ],
         period: existing.month.slice(0, 7),
         sourceTable: "Payout",
         sourceId: payout.id,
         createdBy: session.user.id,
-        description: `Avans: ${existing.reason}`,
+        description: `Avans: ${existing.reason}` + (channelLabel ? ` — ${channelLabel}` : ""),
       });
     }
 
@@ -203,6 +235,8 @@ export async function approvePayrollAdjustment(id: string) {
       amount: Number(existing.amount),
       month: existing.month,
       employeeId: existing.employeeId,
+      // Pul chiqqan bo'lsa — qaysi kassadan (avans yo'li). Boshqa turlarda null.
+      channelId,
     },
   });
 

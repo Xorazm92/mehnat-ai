@@ -48,6 +48,24 @@ export const CHANNEL_TYPE_LABELS: Record<ChannelType, string> = {
   plastik: "Plastik terminal",
 };
 
+/**
+ * Kanal turi → `Payout.paymentMethod`.
+ *
+ * `paymentMethod` — oylik yozuvidagi eski, erkin matnli maydon. Manba
+ * tanlangandan keyin uni yana qo'lda so'rash bir savolni ikki xil so'z bilan
+ * berish bo'lardi va ikki javob bir-biriga zid bo'la olardi ("Naqd kassa"
+ * manbasidan "plastik" usulda). Shuning uchun usul manbadan kelib chiqadi.
+ *
+ * SOF MODULDA: uni `server/payouts.ts` ("use server" — faqat async eksport)
+ * ichida saqlab bo'lmaydi, `server/payroll.ts` ham shu xaritani o'qiydi.
+ */
+export const PAYOUT_METHOD_BY_CHANNEL: Record<ChannelType, string> = {
+  own_firm_account: "schyot",
+  employee_card: "plastik",
+  cash: "naqd",
+  plastik: "terminal",
+};
+
 /** Ro'yxatda ko'rinadigan tartib — eng ko'p ishlatiladigani tepada. */
 export const CHANNEL_TYPE_ORDER: ChannelType[] = [
   "own_firm_account",

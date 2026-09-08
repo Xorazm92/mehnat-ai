@@ -14,7 +14,8 @@
 // O'TDI?" Uch manba, uch xil pul — lekin jadval bitta:
 //   KassaEntry        — kassadan yozilgan kirim/chiqim (tasdiq oqimi bilan)
 //   PaymentAllocation — MIJOZning shartnoma to'lovi (qarzni kamaytiradi)
-//   Payout            — berilgan oylik (balans uni shu yerdan sanaydi)
+//   Payout            — berilgan oylik (balans uni shu yerdan sanaydi;
+//                       "kim" — xodim, "qaysi kassadan" — `channelId`)
 //
 // SANOQ INTIZOMI (`lib/balance.ts` bilan bir xil):
 //   - `rejected` ko'rsatiladi lekin JAMLARDA YO'Q (pul chiqmagan)
@@ -115,9 +116,16 @@ export async function getKassaJournal(filter: JournalFilter = {}): Promise<Journ
           where: {
             deletedAt: null,
             paidAt: { gte: range.from, lt: range.to },
+            // KANAL FILTRI OYLIKKA HAM QO'LLANADI. Ilgari u faqat kassa
+            // yozuvi va taqsimotga tushardi — natijada bitta kassani
+            // filtrlaganda BARCHA oylik to'lovlari qatorda qolardi va
+            // "shu kassadan nima chiqdi?" savoliga qo'shimcha, begona
+            // summa qo'shib javob berardi.
+            ...(filter.channelId ? { channelId: filter.channelId } : {}),
           },
           select: {
             id: true, amount: true, paidAt: true, month: true, note: true,
+            channelId: true,
             employee: { select: { fullName: true } },
           },
           orderBy: { paidAt: "desc" },
@@ -173,7 +181,10 @@ export async function getKassaJournal(filter: JournalFilter = {}): Promise<Journ
       sourceType: "oylik",
       sourceLabel: "Oylik to'lovi",
       date: p.paidAt.toISOString(),
-      channelLabel: null,
+      // Manba endi `Payout` da yoziladi (`server/payouts.ts`) — eski
+      // to'lovlarda NULL bo'lib qoladi va jadvalda bo'sh katak sifatida
+      // ko'rinadi (`scripts/backfill-payout-channel.ts` ularni bog'laydi).
+      channelLabel: channelOf(p.channelId),
       category: p.month,
       who: p.employee.fullName,
       description: p.note ?? null,

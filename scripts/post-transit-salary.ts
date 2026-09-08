@@ -168,6 +168,11 @@ async function main(): Promise<void> {
         month,
         amount: row.amount,
         paymentMethod: "plastik",
+        // Manba jurnal oyog'ida allaqachon bor edi (pastdagi `postLedger`);
+        // endi `Payout` qatorida ham saqlanadi, aks holda jadval va jurnal
+        // bir savolga ikki xil javob berardi (reyestrda manba bo'sh,
+        // kassalar jadvalida to'la).
+        channelId: row.channelId,
         note: `Karta daftaridan: ${row.description ?? row.category ?? "oylik"} [${key}]`,
         paidAt: row.date,
         createdBy: admin?.id ?? null,

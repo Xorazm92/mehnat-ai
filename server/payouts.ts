@@ -15,7 +15,14 @@
 //     da (avans MAJBURIYAT emas, TO'LOV — u yerdagi izohga qarang);
 //   - yopiq davrga payout yozilmaydi/o'chirilmaydi;
 //   - har payout double-entry ledger (SALARY_EXPENSE / CASH) bilan atomar;
-//   - o'chirish faqat soft delete + ledger reversal.
+//   - o'chirish faqat soft delete + ledger reversal;
+//   - MANBA MAJBURIY: har payout qaysi kassadan (`channelId`) chiqqanini
+//     yozadi va jurnal CASH oyog'i shu kanal bilan tushadi. Aks holda pul
+//     umumiy balansdan yo'qolardi, lekin kassalar jadvalida qaysi hisob
+//     kamayganini ko'rsatib bo'lmasdi ("Kanali ko'rsatilmagan" qatori).
+//     Xodim tomoni esa SALARY_EXPENSE oyog'ining `subjectId` sida —
+//     shu ikkisi birga "qaysi manbadan qaysi xodimga" ni jurnalning o'zidan
+//     javob beradigan qiladi.
 
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
@@ -29,6 +36,13 @@ import { ACCOUNTS, postLedger, reverseLedger } from "@/lib/ledger";
 import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { computeObligation, computeRemaining } from "@/lib/payrollObligation";
 import { serialize } from "@/lib/serialize";
+import { assertFundingSource } from "@/server/fundingSources";
+import {
+  CHANNEL_TYPE_LABELS,
+  PAYOUT_METHOD_BY_CHANNEL,
+  normalizeChannelType,
+} from "@/lib/transitChannels";
+import { requireKassa } from "@/server/guards";
 
 const PAYMENT_METHODS = ["naqd", "plastik", "schyot", "terminal", "boshqa"];
 
@@ -64,6 +78,106 @@ async function obligationAndPaid(db: Prisma.TransactionClient, employeeId: strin
   return { obligation, paid };
 }
 
+/** Kassa reyestrining bitta qatori (`getPayoutRegister`). */
+export interface PayoutRegisterRow {
+  id: string;
+  paidAt: string;
+  month: string;
+  employeeId: string;
+  employeeName: string;
+  employeeRole: string;
+  channelId: string | null;
+  channelLabel: string | null;
+  channelTypeLabel: string | null;
+  amount: number;
+  paymentMethod: string;
+  /** Avans tuzatmasidan kelib chiqqan to'lov — oddiy oylikdan ajratiladi. */
+  isAvans: boolean;
+  note: string | null;
+}
+
+export interface PayoutRegister {
+  rows: PayoutRegisterRow[];
+  total: number;
+  /** Manbasi ko'rsatilmagan (eski) to'lovlar — nolga intilishi kerak. */
+  unassignedCount: number;
+  unassignedTotal: number;
+}
+
+/**
+ * KASSA REYESTRI — "shu oralig'da qaysi manbadan qaysi xodimga qancha berildi".
+ *
+ * NEGA ALOHIDA O'QUVCHI. `getPayouts` xodim kesimidagi ekran (`/payroll`)
+ * uchun: u portfel bo'yicha cheklanadi va oy bo'yicha filtrlanadi. Kassa
+ * ekranida esa savol boshqa — pul KASSADAN chiqdi, ya'ni hamma to'lov
+ * ko'rinishi va manba ustuni bo'lishi kerak. Shuning uchun darvoza ham
+ * boshqa: `requireKassa` (moliya rollari), portfel filtri yo'q.
+ *
+ * Oylik BALANSDA allaqachon chiqim edi (`lib/balance.ts` `outflowPayroll`),
+ * lekin chiqim EKRANLARIDA ko'rinmasdi — foydalanuvchi "kassadan pul
+ * kamaydi, xarajatlar ro'yxatida esa yo'q" holatini ko'rardi. Bu funksiya
+ * shu bo'shliqni yopadi. `KassaEntry` YARATILMAYDI: oylikni kassa chiqimi
+ * qilib ham yozish bitta to'lovni ikki marta sanardi.
+ */
+export async function getPayoutRegister(filters?: {
+  /** "YYYY-MM" — berilmasa oxirgi to'lovlar (limit bo'yicha). */
+  month?: string;
+  limit?: number;
+}): Promise<PayoutRegister> {
+  await requireKassa();
+  const limit = Math.min(Math.max(filters?.limit ?? 500, 1), 2000);
+
+  const payouts = await prisma.payout.findMany({
+    where: {
+      deletedAt: null,
+      ...(filters?.month ? { month: filters.month } : {}),
+    },
+    select: {
+      id: true, month: true, amount: true, paidAt: true, note: true,
+      paymentMethod: true, channelId: true, employeeId: true,
+      employee: { select: { fullName: true, role: true } },
+      adjustment: { select: { adjustmentType: true } },
+    },
+    orderBy: { paidAt: "desc" },
+    take: limit,
+  });
+
+  // Kanal nomi alohida o'qiladi — `channelId` FK emas (o'chirilgan kanalli
+  // tarixiy to'lov yo'qolmasin degan qoida, `KassaEntry.channelId` bilan bir xil).
+  const channels = await prisma.disbursementChannel.findMany({
+    select: { id: true, label: true, type: true },
+  });
+  const channelById = new Map(channels.map((c) => [c.id, c]));
+
+  const rows: PayoutRegisterRow[] = payouts.map((p) => {
+    const ch = p.channelId ? channelById.get(p.channelId) : undefined;
+    const kind = ch ? normalizeChannelType(ch.type) : null;
+    return {
+      id: p.id,
+      paidAt: p.paidAt.toISOString(),
+      month: p.month,
+      employeeId: p.employeeId,
+      employeeName: p.employee.fullName,
+      employeeRole: p.employee.role,
+      channelId: p.channelId,
+      channelLabel: p.channelId ? (ch?.label ?? "O'chirilgan kassa") : null,
+      channelTypeLabel: kind ? CHANNEL_TYPE_LABELS[kind] : null,
+      amount: Number(p.amount),
+      paymentMethod: p.paymentMethod,
+      isAvans: p.adjustment?.adjustmentType === "avans",
+      note: p.note,
+    };
+  });
+
+  const unassigned = rows.filter((r) => !r.channelId);
+  return serialize({
+    rows,
+    total: rows.reduce((s, r) => s + r.amount, 0),
+    unassignedCount: unassigned.length,
+    unassignedTotal: unassigned.reduce((s, r) => s + r.amount, 0),
+  });
+}
+
 export async function getPayouts(filters?: { month?: string; employeeId?: string }) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
@@ -97,6 +211,8 @@ export async function createPayout(data: {
   employeeId: string;
   month: string; // "YYYY-MM" yoki "YYYY-MM-DD"
   amount: number;
+  /** Pul QAYSI kassadan chiqadi — majburiy (`DisbursementChannel.id`). */
+  channelId: string;
   paymentMethod?: string;
   note?: string;
 }) {
@@ -113,7 +229,21 @@ export async function createPayout(data: {
   if (!Number.isFinite(data.amount) || data.amount <= 0) {
     throw new Error("To'lov summasi musbat son bo'lishi kerak");
   }
-  const paymentMethod = data.paymentMethod ?? "naqd";
+  // MANBA. Server tomonda TALAB QILINADI — forma majburiy qilgani yetarli
+  // emas: bitta so'rov bilan manbasiz to'lov yozilsa, pul balansdan chiqib
+  // ketardi-yu, qaysi kassa kamayganini aytib bo'lmasdi.
+  const channelId = data.channelId?.trim();
+  if (!channelId) {
+    throw new Error("Pul manbaini tanlang — oylik qaysi kassadan berilmoqda");
+  }
+  await assertFundingSource(channelId);
+  const channel = await prisma.disbursementChannel.findUnique({
+    where: { id: channelId },
+    select: { type: true, label: true },
+  });
+  const channelKind = channel ? normalizeChannelType(channel.type) : null;
+
+  const paymentMethod = data.paymentMethod ?? (channelKind ? PAYOUT_METHOD_BY_CHANNEL[channelKind] : "naqd");
   if (!PAYMENT_METHODS.includes(paymentMethod)) throw new Error("To'lov usuli noto'g'ri");
 
   await assertPeriodOpen(prisma, month, "payout");
@@ -171,21 +301,28 @@ export async function createPayout(data: {
           month,
           amount: new Prisma.Decimal(data.amount),
           paymentMethod,
+          channelId,
           note: data.note?.trim() || null,
           createdBy: userId,
         },
       });
 
+      // Ikki o'lchov birga yoziladi: CASH oyog'ida MANBA (`channelId`),
+      // SALARY_EXPENSE oyog'ida XODIM (`subjectId`, ACCOUNT_SPEC
+      // "user_optional"). Shundan keyin kassalar jadvali ham
+      // (`getCashDeskReport`), xodim kesimi ham to'g'ridan-to'g'ri jurnaldan
+      // o'qiladi — ikkinchi hisob-kitob qatlami kerak emas.
       await postLedger(tx, {
         legs: [
-          { accountId: ACCOUNTS.SALARY_EXPENSE, debit: data.amount },
-          { accountId: ACCOUNTS.CASH, credit: data.amount },
+          { accountId: ACCOUNTS.SALARY_EXPENSE, debit: data.amount, subjectId: data.employeeId },
+          { accountId: ACCOUNTS.CASH, credit: data.amount, channelId },
         ],
         period: month,
         sourceTable: "Payout",
         sourceId: created.id,
         createdBy: userId,
-        description: `Oylik to'lovi: ${employee.fullName} (${month})`,
+        description: `Oylik to'lovi: ${employee.fullName} (${month})`
+          + (channel ? ` — ${channel.label}` : ""),
       });
 
       return created;
@@ -201,6 +338,7 @@ export async function createPayout(data: {
       month,
       amount: data.amount,
       paymentMethod,
+      channelId,
       note: data.note ?? null,
     },
   });
@@ -248,6 +386,7 @@ export async function softDeletePayout(id: string, reason: string) {
       month: existing.month,
       amount: Number(existing.amount),
       paymentMethod: existing.paymentMethod,
+      channelId: existing.channelId,
       paidAt: existing.paidAt.toISOString(),
     },
     newData: { deleteReason: reason.trim() },

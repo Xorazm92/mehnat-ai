@@ -6,6 +6,15 @@
  * esa `"use client"` — undan eksport qilingan ro'yxatni server chaqira
  * olmaydi.
  */
-export type ChiqimTab = "navbat" | "kartalar" | "xojalik" | "xarajat";
+export type ChiqimTab = "navbat" | "kartalar" | "xojalik" | "xarajat" | "oylik";
 
-export const CHIQIM_TAB_IDS: readonly ChiqimTab[] = ["navbat", "kartalar", "xojalik", "xarajat"];
+export const CHIQIM_TAB_IDS: readonly ChiqimTab[] = [
+  "navbat",
+  "kartalar",
+  "xojalik",
+  "xarajat",
+  // "oylik" — berilgan oyliklar reyestri (`Payout`). Pul KASSADAN chiqadi va
+  // balans uni chiqim deb sanaydi, shuning uchun u chiqim ekranida turishi
+  // kerak. Faqat KO'RISH: to'lash `/payroll` da (bitta yozuv yo'li).
+  "oylik",
+];

@@ -36,6 +36,7 @@ import { Tabs, type TabItem } from "@/components/ui";
 import ExpenseModule from "@/components/ExpenseModule";
 import type { Expense, BalanceBreakdown } from "@/types";
 import { createExpense, updateExpense, deleteExpense, approveExpense, rejectExpense } from "@/server/kassa";
+import { createPayout } from "@/server/payouts";
 import { usePrompt } from "@/components/ui/ConfirmDialog";
 import { DateField } from "@/components/ui/DateField";
 import { useTabParam } from "@/hooks/useTabParam";
@@ -75,6 +76,35 @@ interface LedgerRow {
 }
 
 
+/**
+ * `server/payouts.ts#PayoutRegisterRow` ning mijoz nusxasi. Tip serverdan
+ * import qilinmaydi: `import type` erisa ham, bitta ehtiyotsiz qiymat
+ * importi butun Prisma zanjirini brauzer to'plamiga tortadi
+ * (`lib/transitChannels.ts` boshidagi izohga qarang).
+ */
+interface PayoutRow {
+  id: string;
+  paidAt: string;
+  month: string;
+  employeeId: string;
+  employeeName: string;
+  employeeRole: string;
+  channelId: string | null;
+  channelLabel: string | null;
+  channelTypeLabel: string | null;
+  amount: number;
+  paymentMethod: string;
+  isAvans: boolean;
+  note: string | null;
+}
+
+interface PayoutRegister {
+  rows: PayoutRow[];
+  total: number;
+  unassignedCount: number;
+  unassignedTotal: number;
+}
+
 interface Props {
   overview: { channels: Channel[]; totalBalance: number; unlinkedCount: number };
   unlinked: UnlinkedTransfer[];
@@ -97,6 +127,17 @@ interface Props {
   expenses: Expense[];
   expenseBalance?: BalanceBreakdown;
   expenseCategories?: string[];
+  /**
+   * BERILGAN OYLIKLAR (`Payout`) — kassadan chiqqan pul, `KassaEntry` emas.
+   * Balans uni allaqachon chiqim deb sanardi (`lib/balance.ts`
+   * `outflowPayroll`), lekin chiqim EKRANIDA ko'rinmasdi: kassadan pul
+   * kamayar, xarajatlar ro'yxatida esa hech narsa yo'q edi. Bu yerda faqat
+   * KO'RSATILADI — pul berish `/payroll` da (bitta yozuv yo'li, aks holda
+   * bir to'lov ikki jadvalga tushib, ikki marta hisoblanardi).
+   */
+  payouts: PayoutRegister;
+  /** `payroll` ko'rinishi — oylik reyestri tabi shu bilan ochiladi. */
+  canViewPayroll: boolean;
   userRole: string;
   /**
    * `kassa_expense` ruxsati bormi (tranzit kanallarni boshqarish). Yo'q
@@ -176,9 +217,84 @@ const HOUSEHOLD_COLUMNS: DataColumn<{ period: string; total: number; count: numb
   },
 ];
 
+/**
+ * BERILGAN OYLIK REYESTRI — "qaysi manbadan qaysi xodimga".
+ *
+ * Ikki ustun bu ekranning butun sababi: `employeeName` (kimga) va
+ * `channelLabel` (qaysi kassadan). Manba ustuni bo'sh bo'lsa — bu
+ * `Payout.channelId` qo'shilishidan OLDINGI to'lov; ular
+ * `scripts/backfill-payout-channel.ts` bilan bog'lanadi.
+ */
+const PAYOUT_COLUMNS: DataColumn<PayoutRow>[] = [
+  {
+    key: "employee",
+    header: "Xodim",
+    cell: (p) => (
+      <span className="font-semibold" style={{ color: "var(--text)" }}>{p.employeeName}</span>
+    ),
+    sortValue: (p) => p.employeeName,
+    sticky: true,
+    mobile: "title",
+  },
+  {
+    key: "channel",
+    header: "Manba",
+    cell: (p) =>
+      p.channelLabel ? (
+        <span>
+          {p.channelLabel}
+          {p.channelTypeLabel && (
+            <span className="text-micro block" style={{ color: "var(--text-muted)" }}>
+              {p.channelTypeLabel}
+            </span>
+          )}
+        </span>
+      ) : (
+        <Badge tone="warning">Ko&apos;rsatilmagan</Badge>
+      ),
+    sortValue: (p) => p.channelLabel ?? "",
+  },
+  {
+    key: "paidAt",
+    header: "Berilgan sana",
+    cell: (p) => formatUzDate(p.paidAt),
+    sortValue: (p) => p.paidAt,
+    mobile: "meta",
+  },
+  {
+    key: "month",
+    header: "Qaysi oy uchun",
+    cell: (p) => p.month,
+    sortValue: (p) => p.month,
+  },
+  {
+    key: "kind",
+    header: "Turi",
+    cell: (p) => <Badge tone={p.isAvans ? "warning" : "neutral"}>{p.isAvans ? "Avans" : "Oylik"}</Badge>,
+    sortValue: (p) => (p.isAvans ? "avans" : "oylik"),
+    mobile: "status",
+  },
+  {
+    key: "amount",
+    header: "Summa",
+    cell: (p) => <Money value={p.amount} tone="out" bold />,
+    sortValue: (p) => p.amount,
+    numeric: true,
+    align: "right",
+  },
+  {
+    key: "note",
+    header: "Izoh",
+    cell: (p) => p.note ?? "—",
+    sortValue: (p) => p.note ?? "",
+    mobile: "hide",
+  },
+];
+
 export default function ChiqimKassaClient({
   overview, unlinked, employees, household, queue,
-  expenses, expenseBalance, expenseCategories, userRole, canManageChannels, initialTab,
+  expenses, expenseBalance, expenseCategories, payouts, canViewPayroll,
+  userRole, canManageChannels, initialTab,
 }: Props) {
   const router = useRouter();
   const prompt = usePrompt();
@@ -195,7 +311,18 @@ export default function ChiqimKassaClient({
   // Yorliq URL'da: F5 bosilganda holat saqlanadi va "kartalarga qara" deb
   // havola yuborish mumkin (`/kassa/chiqim?tab=kartalar`). Ilgari bu oddiy
   // `useState` edi — sahifa yangilanganda navbatga qaytib tushardi.
-  const [tab, setTab] = useTabParam<ChiqimTab>("tab", CHIQIM_TAB_IDS, initialTab);
+  //
+  // YORLIQLAR RUXSATGA QARAB. Ilgari ro'yxat qotib yozilgan edi va
+  // `canManageChannels=false` bo'lganda tab almashtirgichning O'ZI
+  // yashirilardi (yagona "Xarajat" uchun tanlov keraksiz edi). Endi ikkinchi
+  // ochiq bo'lim ham bor — "Oylik" — shuning uchun ro'yxat hisoblanadi va
+  // almashtirgich bittadan ko'p bo'lim bo'lganda chiziladi.
+  const allowedTabs = CHIQIM_TAB_IDS.filter((id) => {
+    if (id === "oylik") return canViewPayroll;
+    if (id === "xarajat") return true;
+    return canManageChannels;
+  });
+  const [tab, setTab] = useTabParam<ChiqimTab>("tab", allowedTabs, initialTab);
   // Toifalash navbati: qaysi qator ustida ish ketyapti va xato matni.
 
   // Kassaga hali yozilmaganlar — yozilgani ro'yxatdan chiqadi.
@@ -370,14 +497,15 @@ export default function ChiqimKassaClient({
       {/* `canManageChannels=false` bo'lganda tab almashtirgichning o'zi
           yashiriladi — bitta tab ko'rsatish uchun tanlov taqdim etish
           keraksiz interfeys shovqini bo'lardi. */}
-      {canManageChannels && (
+      {allowedTabs.length > 1 && (
         <Tabs
-          items={[
+          items={([
             { id: "navbat", label: "Yopish kerak", hint: "Vipiskadan kelgan chiqimni toifalab yopish", count: queue.rows.length || undefined },
             { id: "kartalar", label: "Xodim kartalari", hint: "Kartalar qoldig'i va bog'lanmagan o'tkazmalar", count: unlinked.length || undefined },
             { id: "xojalik", label: "Xo'jalik xarajati", hint: "Ovqat, taksi, non — kunlik xarajatlar" },
             { id: "xarajat", label: "Xarajat", hint: "Kassa xarajatlari ro'yxati va tasdiq oqimi" },
-          ] as TabItem<ChiqimTab>[]}
+            { id: "oylik", label: "Oylik", hint: "Qaysi manbadan qaysi xodimga berildi", count: payouts.rows.length || undefined },
+          ] as TabItem<ChiqimTab>[]).filter((t) => allowedTabs.includes(t.id))}
           value={tab}
           onChange={setTab}
           ariaLabel="Chiqim kassa bo'limlari"
@@ -543,16 +671,24 @@ export default function ChiqimKassaClient({
       {tab === "xarajat" && (<>
       {/* Xodimga oylik/avans — "Oylik" toifasi ataylab shu ro'yxatda yo'q
           (`lib/kassaCategories.ts`): u kassa chiqimi emas, `Payout`
-          orqali beriladi, aks holda balans ikki marta hisoblanadi. Xodim
-          tanlash, oylik hisob-kitobi va real to'lov `/payroll`da tayyor. */}
+          orqali beriladi, aks holda balans ikki marta hisoblanadi. Berilgan
+          pul esa yonidagi "Oylik" tabida — manba va xodim kesimida. */}
       <div className="p-4 rounded-xl flex items-center justify-between gap-3 flex-wrap" style={card}>
         <p className="text-meta" style={{ color: "var(--text-muted)" }}>
-          Xodimga oylik yoki avans berish uchun alohida ekran bor — u yerda
-          xodim tanlanadi, oylik hisoblanadi va real to&apos;lov yoziladi.
+          Oylik bu ro&apos;yxatda emas — u kassadan <b>Oylik</b> bo&apos;limida
+          ko&apos;rinadi (qaysi manbadan qaysi xodimga), pul berish esa oylik
+          sahifasida.
         </p>
-        <Link href="/payroll">
-          <Button variant="secondary" size="md"><Users size={15} /> Oylik sahifasiga o&apos;tish</Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          {canViewPayroll && (
+            <Button variant="secondary" size="md" onClick={() => setTab("oylik")}>
+              <Wallet size={15} /> Oylik reyestri
+            </Button>
+          )}
+          <Link href="/payroll">
+            <Button variant="secondary" size="md"><Users size={15} /> Oylik sahifasiga o&apos;tish</Button>
+          </Link>
+        </div>
       </div>
       {/* Avvalgi mustaqil `/expenses` sahifasi — o'zgarishsiz ko'chirildi
           (props/callback bir xil, faqat joylashuv o'zgardi). */}
@@ -562,6 +698,34 @@ export default function ChiqimKassaClient({
           userRole={userRole}
           balance={expenseBalance}
           categories={expenseCategories}
+          // OYLIK YO'LI. Toifalar ro'yxatida "Oylik" paydo bo'ladi va u
+          // tanlanganda forma xodim + qaysi oy so'raydi. Yozuv `KassaEntry`
+          // EMAS, `Payout` — balans oylikni o'sha jadvaldan sanaydi, kassa
+          // yozuvi ham qilinsa bitta to'lov ikki marta hisoblanardi.
+          // Majburiyat/ortiqcha to'lov/davr qulfi tekshiruvi serverda
+          // (`createPayout`) — bu yerda ikkinchi qoida nusxasi yo'q.
+          payroll={
+            canViewPayroll
+              ? {
+                  employees,
+                  onSavePayout: async (data) => {
+                    try {
+                      await createPayout(data);
+                      toast.success("Oylik to'lovi yozildi");
+                      router.refresh();
+                      // Yozuv xarajatlar ro'yxatida ko'rinmaydi (u boshqa
+                      // jadvalda) — foydalanuvchini darhol o'z reyestriga
+                      // olib o'tamiz, aks holda "saqladim, lekin qani?"
+                      // savoli tug'ilardi.
+                      setTab("oylik");
+                    } catch (e) {
+                      toast.error(friendlyError(e));
+                      throw e; // modal ochiq qolsin
+                    }
+                  },
+                }
+              : undefined
+          }
           onSaveExpense={async (expense: Partial<Expense>) => {
             const data = {
               amount: Number(expense.amount || 0),
@@ -601,6 +765,61 @@ export default function ChiqimKassaClient({
             catch (e) { toast.error(friendlyError(e)); }
           }}
         />
+      </>)}
+
+      {/* ================= OYLIK REYESTRI =================
+          Oylik BALANSDA doim chiqim edi, lekin chiqim EKRANIDA ko'rinmasdi:
+          kassadan pul kamayar, xarajatlar ro'yxatida esa hech narsa yo'q edi.
+          Bu bo'lim shu bo'shliqni yopadi va ikki ustunga javob beradi —
+          QAYSI MANBADAN (kassa kanali) QAYSI XODIMGA.
+
+          FAQAT KO'RISH. Pul berish `/payroll` da qoladi: u yerda majburiyat
+          hisoblanadi, ortiqcha to'lov bloklanadi va davr qulfi tekshiriladi.
+          Bu yerda ikkinchi yozuv yo'li ochilsa, bitta to'lov ikki jadvalga
+          tushib qolardi. */}
+      {tab === "oylik" && (<>
+      <div className="p-4 rounded-xl flex items-center justify-between gap-3 flex-wrap" style={card}>
+        <div className="min-w-0">
+          <p className="text-body font-semibold" style={{ color: "var(--text)" }}>
+            Berilgan oyliklar — {payouts.rows.length} ta ·{" "}
+            <Money value={payouts.total} tone="out" bold />
+          </p>
+          <p className="text-meta" style={{ color: "var(--text-muted)" }}>
+            Kassadan chiqqan real pul. Balansda ham shu summa chiqim sifatida
+            turadi — kassa yozuvi (xarajat) sifatida qayta yozilmaydi.
+          </p>
+        </div>
+        <Link href="/payroll">
+          <Button variant="secondary" size="md"><Users size={15} /> Oylik berish</Button>
+        </Link>
+      </div>
+
+      {/* Manbasi ko'rsatilmagan to'lovlar — `Payout.channelId` dan oldingi
+          qatorlar. Ular kassalar jadvalida "Kanali ko'rsatilmagan" qatorida
+          turadi, ya'ni raqam to'g'ri, lekin qaysi hisob kamaygani noma'lum.
+          Yashirilmaydi: aks holda jadval "chiroyli, lekin yolg'on" bo'lardi
+          (`server/kassaReport.ts` dagi bilan bir xil qoida). */}
+      {payouts.unassignedCount > 0 && (
+        <div className="p-3 rounded-xl flex items-start gap-3" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)" }}>
+          <AlertTriangle size={16} style={{ color: "var(--warning)" }} className="mt-0.5 shrink-0" />
+          <p className="text-meta" style={{ color: "var(--text-secondary)" }}>
+            {payouts.unassignedCount} ta to&apos;lovda manba ko&apos;rsatilmagan
+            ({formatNum(payouts.unassignedTotal)} so&apos;m) — bular yangi qoidadan
+            oldin yozilgan. Ular kassalar jadvalida &quot;Kanali ko&apos;rsatilmagan&quot;
+            qatorida turadi.
+          </p>
+        </div>
+      )}
+
+      <DataTable
+        rows={payouts.rows}
+        columns={PAYOUT_COLUMNS}
+        rowKey={(p) => p.id}
+        caption="Berilgan oyliklar — manba va xodim kesimida"
+        emptyTitle="Oylik berilmagan"
+        emptyDescription="Bu ro'yxatda /payroll orqali berilgan real to'lovlar ko'rinadi."
+        emptyIcon={<Wallet size={28} />}
+      />
       </>)}
 
       {tab === "kartalar" && (<>
