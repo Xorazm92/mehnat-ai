@@ -4,12 +4,12 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FilePlus2, Send, Ban, ExternalLink } from "lucide-react";
+import { FilePlus2, Send, Ban, ExternalLink, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge, type BadgeTone } from "@/components/ui";
 import { formatNum, formatUzDate } from "@/lib/platform/format";
 import { friendlyError } from "@/lib/actionError";
-import { createInvoicesForPeriod, issueInvoice, cancelInvoice } from "@/server/invoices";
+import { createInvoicesForPeriod, issueInvoice, cancelInvoice, reissueInvoice } from "@/server/invoices";
 
 interface Row {
   id: string;
@@ -52,18 +52,51 @@ function paymentLabel(total: number, collected: number) {
   return { text: "To'langan", color: "var(--success)" };
 }
 
+interface PageData {
+  rows: Row[];
+  totalCount: number;
+  hasMore: boolean;
+  page: number;
+  pageSize: number;
+}
+
 export default function InvoicesClient({
   initialPeriod,
-  invoices,
+  page: data,
 }: {
   initialPeriod: string;
-  invoices: Row[];
+  page: PageData;
 }) {
   const router = useRouter();
   const [period, setPeriod] = useState(initialPeriod);
   const [busy, setBusy] = useState(false);
 
-  const filtered = invoices.filter((i) => !period || i.period === period);
+  /**
+   * DAVR VA SAHIFA URL'ga yoziladi va SERVERDAN qayta so'raladi.
+   *
+   * Bu yerda `history.replaceState` (loyihadagi `useTableState` naqshi)
+   * ishlamaydi: u serverga bormaydi, ro'yxat esa endi serverda kesiladi.
+   * Shuning uchun haqiqiy navigatsiya — `router.push`.
+   */
+  const go = (next: { period?: string; page?: number }) => {
+    const params = new URLSearchParams();
+    const p = next.period ?? period;
+    if (p) params.set("period", p);
+    const pg = next.page ?? 1;
+    if (pg > 1) params.set("page", String(pg));
+    const qs = params.toString();
+    router.push(qs ? `/admin/invoices?${qs}` : "/admin/invoices");
+  };
+
+  // Davr o'zgarsa sahifa 1 ga qaytadi: 3-sahifa boshqa davrda bo'lmasligi
+  // mumkin va foydalanuvchi bo'sh jadval ko'rardi.
+  const changePeriod = (value: string) => {
+    setPeriod(value);
+    go({ period: value, page: 1 });
+  };
+
+  const rows = data.rows;
+  const lastPageNo = Math.max(1, Math.ceil(data.totalCount / data.pageSize));
 
   const generate = async () => {
     setBusy(true);
@@ -119,7 +152,7 @@ export default function InvoicesClient({
           <input
             type="month"
             value={period}
-            onChange={(e) => setPeriod(e.target.value)}
+            onChange={(e) => changePeriod(e.target.value)}
             className="px-3 py-2 rounded-lg text-body outline-none"
             style={{ background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text-primary)" }}
           />
@@ -130,7 +163,7 @@ export default function InvoicesClient({
       </div>
 
       <div className="p-5 rounded-xl" style={card}>
-        {filtered.length === 0 ? (
+        {rows.length === 0 ? (
           <p className="text-meta" style={{ color: "var(--text-muted)" }}>
             {period} davri uchun schyot yo&apos;q. &laquo;Oy uchun yozish&raquo; tugmasini bosing.
           </p>
@@ -149,7 +182,7 @@ export default function InvoicesClient({
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((r) => {
+                {rows.map((r) => {
                   const pay = paymentLabel(r.total, r.collected);
                   return (
                     <tr key={r.id} style={{ borderTop: "1px solid var(--card-border)", opacity: r.status === "cancelled" ? 0.5 : 1 }}>
@@ -188,12 +221,52 @@ export default function InvoicesClient({
                             <Ban size={15} style={{ color: "var(--danger)" }} />
                           </button>
                         )}
+                        {/* QAYTA CHIQARISH — yangi hujjat EMAS: o'sha raqam va
+                            o'sha satrlar qoralama holatiga qaytadi. Yangisini
+                            yozish raqamlar ketma-ketligida bo'shliq qoldirardi
+                            va mijozdagi nusxa bilan mos kelmasdi. */}
+                        {r.status === "cancelled" && (
+                          <button
+                            onClick={() => act(() => reissueInvoice(r.id), `${r.number} qoralamaga qaytarildi`)}
+                            disabled={busy}
+                            title="Qayta chiqarish — qoralamaga qaytaradi"
+                            className="p-1 ml-1"
+                          >
+                            <RotateCcw size={15} style={{ color: "var(--accent-blue)" }} />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* SAHIFALASH — faqat bir sahifadan ko'p bo'lganda. Bitta sahifalik
+            ro'yxatda tugmalar hech narsa qilmaydi va shovqin bo'lardi. */}
+        {lastPageNo > 1 && (
+          <div className="flex items-center justify-between gap-3 pt-4 mt-4" style={{ borderTop: "1px solid var(--card-border)" }}>
+            <p className="text-meta tabular-nums" style={{ color: "var(--text-muted)" }}>
+              {data.totalCount} ta schyot · {data.page} / {lastPageNo}-sahifa
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => go({ page: data.page - 1 })}
+                disabled={busy || data.page <= 1}
+              >
+                ← Oldingi
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => go({ page: data.page + 1 })}
+                disabled={busy || !data.hasMore}
+              >
+                Keyingi →
+              </Button>
+            </div>
           </div>
         )}
       </div>
