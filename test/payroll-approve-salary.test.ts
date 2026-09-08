@@ -16,7 +16,7 @@ vi.mock("@/lib/auth", () => ({ auth: async () => SESSION }));
 vi.mock("server-only", () => ({}));
 
 const { prisma } = await import("@/lib/prisma");
-const { approveEmployeeSalary } = await import("@/server/payroll");
+const { approveEmployeeSalary, getPayrollAdjustments } = await import("@/server/payroll");
 
 const TAG = `vitest-pay-${Date.now()}`;
 const MONTH = "2099-03-01";
@@ -153,5 +153,79 @@ describe("approveEmployeeSalary", () => {
 
     // base only — the self-assessment must not pay
     expect(Number(adjustment.amount)).toBe(2_000_000);
+  });
+});
+
+/**
+ * OY KALITI — "YYYY-MM" va "YYYY-MM-01".
+ *
+ * Bu blok haqiqiy prod yo'lini takrorlaydi. `PayrollDrafts` ekrani
+ * `approveEmployeeSalary` ni "YYYY-MM" bilan chaqiradi (komponent holati shu
+ * shaklda), `MonthlyPerformance.month` esa "YYYY-MM-01". Server qat'iy tenglik
+ * bilan qidirgani uchun birorta KPI qatorini topmasdi: nazoratchi ekranda
+ * bonusi bor qoralamani ko'rib tasdiqlardi, bazaga esa faqat bazaviy summa
+ * tushardi. Yuqoridagi testlar buni ko'rmagan, chunki ular MONTH ni allaqachon
+ * "-01" bilan uzatadi.
+ */
+describe("approveEmployeeSalary — oy kaliti ikki shaklda", () => {
+  // MONTH bilan AYNI davr, faqat "-01" siz — PayrollDrafts aynan shunday yuboradi.
+  const MONTH_SHORT = MONTH.slice(0, 7);
+
+  it("'-01' siz kelganda ham KPI oylikka tushadi", async () => {
+    await setScore(0.6); // +0.6% × 10,000,000 = 60,000
+
+    const adjustment = await approveEmployeeSalary({
+      employeeId: ids.employee,
+      month: MONTH_SHORT,
+    });
+
+    // Nuqson vaqtida bu 2,000,000 edi — KPI jimgina yo'qolardi.
+    expect(Number(adjustment.amount)).toBe(2_060_000);
+  });
+
+  it("kanonik shaklda yoziladi ('YYYY-MM')", async () => {
+    await setScore(0.6);
+
+    const adjustment = await approveEmployeeSalary({
+      employeeId: ids.employee,
+      month: MONTH,
+    });
+
+    // Pul qatlamining qolgani ham shu shaklda: Payout.month, davr qulfi, monthClose.
+    expect(adjustment.month).toBe(MONTH_SHORT);
+  });
+
+  it("dublikat qo'riqchisi ikkala shaklni ko'radi — oylik ikki marta yozilmaydi", async () => {
+    await setScore(0.6);
+
+    await approveEmployeeSalary({ employeeId: ids.employee, month: MONTH_SHORT });
+
+    // Ikkinchi urinish BOSHQA shaklda — ilgari qo'riqchi uni sezmay, bitta oyga
+    // ikkita 'payment' majburiyati yozilardi (oylik ikki barobar).
+    await expect(
+      approveEmployeeSalary({ employeeId: ids.employee, month: MONTH })
+    ).rejects.toThrow(/allaqachon tasdiqlangan/);
+
+    const written = await prisma.payrollAdjustment.count({
+      where: { employeeId: ids.employee, adjustmentType: "payment", deletedAt: null },
+    });
+    expect(written).toBe(1);
+  });
+
+  it("o'qishda eski '-01' qatorlari ham ko'rinadi (migratsiyasiz)", async () => {
+    await prisma.payrollAdjustment.createMany({
+      data: [
+        { month: MONTH_SHORT, employeeId: ids.employee, adjustmentType: "bonus", amount: 111, reason: "kanonik" },
+        { month: MONTH, employeeId: ids.employee, adjustmentType: "bonus", amount: 222, reason: "eski" },
+      ],
+    });
+
+    const rows = await getPayrollAdjustments(MONTH_SHORT, ids.employee);
+    const amounts = rows.map((r) => Number(r.amount)).sort((a, b) => a - b);
+    expect(amounts).toEqual([111, 222]);
+
+    // Teskari yo'nalish ham: "-01" bilan so'ralganda kanonik qator yo'qolmasin.
+    const reverse = await getPayrollAdjustments(MONTH, ids.employee);
+    expect(reverse.map((r) => Number(r.amount)).sort((a, b) => a - b)).toEqual([111, 222]);
   });
 });

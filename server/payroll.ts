@@ -19,11 +19,37 @@ import { calculateEmployeeSalary, type CompanyAssignment } from "@/lib/kpiLogic"
 import { getCollectedByCompany, readPayrollBasis } from "@/lib/payrollCollected";
 import type { PayrollBasis } from "@/lib/payrollBasis";
 import { mapMonthlyReportToOperationEntry } from "@/lib/operationTemplates";
+import { toPerformanceMonth, toYearMonthKey } from "@/lib/periods";
 import type { Company, CompanyKPIRule, KPIRule, MonthlyPerformance, Staff } from "@/types";
 
 // =====================================================
 // PAYROLL ADJUSTMENTS
 // =====================================================
+
+/**
+ * `PayrollAdjustment.month` uchun KANONIK kalit — "YYYY-MM".
+ *
+ * Nega aynan shu shakl: pul qatlamining qolgani allaqachon shunday yuradi —
+ * `Payout.month` ("2026-08"), davr qulfi (`lib/periodLock` yil+oy),
+ * `lib/monthClose` `monthKey()`, va `approveEmployeeSalary` ning o'zi
+ * `PayrollDrafts` dan "YYYY-MM" oladi. `MonthlyPerformance` esa boshqa
+ * konvensiyada ("YYYY-MM-01") va u SHU HOLICHA qoladi — ikkisi turli jadval.
+ */
+const adjustmentMonthKey = (month: string): string => toYearMonthKey(month) || month;
+
+/**
+ * O'qishda IKKALA shakl ham qabul qilinadi.
+ *
+ * Bazada ikkalasi yonma-yon yotibdi, chunki yozuvchilar ikkiga bo'lingan edi:
+ * `approveEmployeeSalary` va `applyCoverTransfers` "YYYY-MM" yozardi,
+ * `PayrollTable` esa "YYYY-MM-01". Qat'iy tenglik bilan o'qigan ekran
+ * qatorlarning bir qismini JIMGINA ko'rmasdi. Yozuv endi kanonik shaklga
+ * keltiriladi, lekin eski qatorlar migratsiyasiz ham ko'rinib tursin.
+ */
+const adjustmentMonthFilter = (month: string) => {
+  const key = adjustmentMonthKey(month);
+  return { in: [key, `${key}-01`] };
+};
 
 export async function getPayrollAdjustments(month: string, employeeId?: string) {
   const session = await auth();
@@ -37,7 +63,7 @@ export async function getPayrollAdjustments(month: string, employeeId?: string) 
   return serialize(
     await prisma.payrollAdjustment.findMany({
       where: {
-        month,
+        month: adjustmentMonthFilter(month),
         deletedAt: null,
         ...(targetId ? { employeeId: targetId } : {}),
       },
@@ -94,7 +120,7 @@ export async function createPayrollAdjustment(data: {
   // `paymentMethod` bilan bo'lgani kabi).
   const created = await prisma.payrollAdjustment.create({
     data: {
-      month: data.month,
+      month: adjustmentMonthKey(data.month),
       employeeId: data.employeeId,
       adjustmentType: data.adjustmentType,
       amount: data.amount,
@@ -381,7 +407,20 @@ async function computeEmployeeSalary(employeeId: string, month: string) {
       },
     }),
     prisma.monthlyPerformance.findMany({
-      where: { month, employeeId, status: "approved" },
+      // OY KALITI NORMALLASHTIRILADI — `MonthlyPerformance.month` "YYYY-MM-01".
+      //
+      // Bu satr KPI'ni oylikdan JIMGINA tushirib qoldirardi. `PayrollDrafts`
+      // ekrani `approveEmployeeSalary({ month: draft.month })` ni "YYYY-MM"
+      // bilan chaqiradi (komponent holati shu shaklda), bu yerda esa qat'iy
+      // tenglik bilan qidirilardi — ya'ni server HECH QACHON birorta KPI
+      // qatorini topmasdi. Nazoratchi ekranda bonus/jarimasi bor qoralamani
+      // ko'rib "Tasdiqlash" bosardi, bazaga esa faqat bazaviy summa yozilardi
+      // (funksiya ustidagi izoh aynan shuni va'da qiladi: "the figure a
+      // Supervisor approves is the figure that gets written").
+      //
+      // Testlar buni ushlamagan, chunki ularda MONTH = "2099-03-01", ya'ni
+      // allaqachon `-01` shaklida — prodda esa "-01" yo'q.
+      where: { month: toPerformanceMonth(month) || month, employeeId, status: "approved" },
       // Qoidaning ROLI ham kerak: `lib/kpiLogic.ts` har oylik rolига faqat
       // o'sha rolning qoidalarini qo'llaydi (`ruleRole`). Busiz filtr jimgina
       // ochilib qolardi — qarang server/kpi.ts findPerformance izohi.
@@ -474,10 +513,14 @@ export async function approveEmployeeSalary(data: { employeeId: string; month: s
   }
   await assertPeriodOpen(prisma, data.month, "oylik tasdig'i");
 
+  // DUBLIKAT QO'RIQCHISI IKKALA SHAKLNI KO'RADI. Qat'iy tenglik bilan bir oy
+  // "2026-07" deb, keyin "2026-07-01" deb tasdiqlansa, qo'riqchi ikkinchisini
+  // sezmasdi va bitta oyga IKKITA 'payment' majburiyati yozilardi — ya'ni
+  // oylik ikki barobar (ADR-0004 oilasidagi nuqson).
   const existing = await prisma.payrollAdjustment.findFirst({
     where: {
       employeeId: data.employeeId,
-      month: data.month,
+      month: adjustmentMonthFilter(data.month),
       adjustmentType: "payment",
       deletedAt: null,
     },
@@ -515,7 +558,7 @@ export async function approveEmployeeSalary(data: { employeeId: string; month: s
       const dupe = await tx.payrollAdjustment.findFirst({
         where: {
           employeeId: data.employeeId,
-          month: data.month,
+          month: adjustmentMonthFilter(data.month),
           adjustmentType: "payment",
           deletedAt: null,
         },
@@ -525,7 +568,7 @@ export async function approveEmployeeSalary(data: { employeeId: string; month: s
 
       return tx.payrollAdjustment.create({
         data: {
-          month: data.month,
+          month: adjustmentMonthKey(data.month),
           employeeId: data.employeeId,
           adjustmentType: "payment",
           amount: draft.totalSalary,

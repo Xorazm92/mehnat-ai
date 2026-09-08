@@ -81,8 +81,12 @@ describe("payout lifecycle", () => {
   it("salary approved = obligation only, no money out yet", async () => {
     await approveEmployeeSalary({ employeeId: ids.employee, month: MONTH });
 
+    // Majburiyat KANONIK oy kalitida yotadi — `Payout.month` bilan bir xil
+    // (`MONTH_KEY`). Ilgari `approveEmployeeSalary` chaqiruvchi bergan shaklni
+    // ("2099-05-01") o'zgarishsiz yozardi va bitta oy bazada ikki xil kalit
+    // bilan yashardi; dublikat qo'riqchisi ham shu sababdan ko'r edi.
     const obligation = await prisma.payrollAdjustment.findFirst({
-      where: { employeeId: ids.employee, month: MONTH, adjustmentType: "payment" },
+      where: { employeeId: ids.employee, month: MONTH_KEY, adjustmentType: "payment" },
     });
     expect(obligation).not.toBeNull();
     expect(obligation!.isApproved).toBe(true);
