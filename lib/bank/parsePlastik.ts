@@ -48,7 +48,30 @@ export function readLooseJsonArray(raw: string): Record<string, unknown>[] {
     throw new BankStatementParseError(`Faylni JSON sifatida o'qib bo'lmadi: ${(e as Error).message}`);
   }
   if (!Array.isArray(parsed)) throw new BankStatementParseError("Kutilgani — obyektlar ro'yxati");
-  return parsed.filter((r): r is Record<string, unknown> => !!r && typeof r === "object");
+  const rows = parsed.filter((r): r is Record<string, unknown> => !!r && typeof r === "object");
+
+  // ── VARAQ O'RAMINI OCHISH ──────────────────────────────────────────────
+  //
+  // Excel→JSON o'giruvchilari qatorlarni VARAQ NOMI bilan o'raydi:
+  //   {"TDSheet": [ {...}, {...} ]}
+  // Bunday fayl bu yerda BITTA qator bo'lib qaytardi va har bir o'quvchi
+  // "sarlavha qatori topilmadi" deb to'xtardi — 2026-09-07 da
+  // `scripts/import-debt-snapshot.ts` aynan shu sababdan ishlamay qoldi
+  // (31.07 va 01.08 fayllari o'ramli ko'rinishda qayta eksport qilingan).
+  //
+  // Shart ataylab tor: FAQAT bitta qator bo'lsa va uning ichida FAQAT BITTA
+  // massiv bo'lsa ochiladi. Haqiqiy vipiska/kesim qatorida massiv maydon
+  // bo'lmaydi, ya'ni to'g'ri fayl xato ochilib ketmaydi.
+  if (rows.length === 1) {
+    const inner = Object.values(rows[0]).filter(Array.isArray);
+    if (inner.length === 1) {
+      return (inner[0] as unknown[]).filter(
+        (r): r is Record<string, unknown> => !!r && typeof r === "object"
+      );
+    }
+  }
+
+  return rows;
 }
 
 const HEADER_MARK = "Контрагент.ИНН";

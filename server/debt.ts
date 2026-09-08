@@ -13,10 +13,11 @@
 
 import { prisma } from "@/lib/prisma";
 import { isAdminRole } from "@/lib/platform/permissions";
+import { auth } from "@/lib/auth";
 import { requireSenior } from "@/server/guards";
 import { companyScopeWhere } from "@/lib/platform/access";
 import { serialize } from "@/lib/serialize";
-import { computeContractDebt, listDebtors, periodKeyOf } from "@/lib/debt";
+import { computeContractDebt, expectedByCompany, listDebtors, periodKeyOf } from "@/lib/debt";
 import { contractNumberOf } from "@/lib/debtReport";
 import { runReconciliation } from "@/lib/reconciliation";
 import { recordAuditLog } from "@/lib/platform/auditTrail";
@@ -36,6 +37,220 @@ export interface DebtRow {
   diff: number | null;
   companyId: string | null;
   linked: boolean;
+}
+
+/**
+ * MATRITSA "TO'LOV" USTUNI UCHUN — firma bo'yicha 1C QARZI.
+ *
+ * NEGA KERAK. Matritsadagi ustun "tushgan pul / kutilgan summa" ni
+ * ko'rsatardi va tushgan pul ASRO bazasidan olinadi
+ * (`PaymentAllocation` → `getPeriodPaymentStatus`). Amalda to'lovlar hali
+ * tizimga kiritilmagan — bazada 16 ta taqsimot bor, 1C kesimida esa 249
+ * qator (1,29 mlrd). Natijada ustun deyarli har qatorda "0 / 500,000" deb
+ * turardi va ekranga qarab "kim to'lagan?" degan savolga javob topib
+ * bo'lmasdi.
+ *
+ * Shuning uchun kesimdagi QARZ shu yerdan qo'shiladi. U to'lovni
+ * ALMASHTIRMAYDI — ikkalasi turli savol:
+ *   tushgan pul — shu oyda bizga kelgan summa (ASRO yozuvi);
+ *   1C qarzi    — o'tgan oylar bilan birga jamg'arilgan qoldiq (fayl).
+ *
+ * KESIM TANLASH: davr oxiridan keyingi kunga eng yaqin kesim, ya'ni
+ * `asOf <= keyingi oyning 1-kuni`. 2026-07 uchun bu 01.08 fayli — 1C shu
+ * kunda iyul xizmat haqini yozib bo'lgan (qarang `31.07` va `01.08`
+ * juftligi, `getDebtStatement` izohi).
+ *
+ * YARIM QAMROVLI KESIM O'TKAZIB YUBORILADI. Bazada 07.08 kesimi bor va u
+ * eski importerdan kelgan — 249 qator o'rniga 131, ya'ni mijozlarning
+ * yarmi. "Eng yangisini ol" qoidasi avgust ekranida aynan shuni tanlardi
+ * va 194 firmadan 60 tasigina qarz bilan chiqardi; qolganlari "kesimda
+ * yo'q" bo'lib ko'rinardi — holbuki qarzi bor edi. Shuning uchun eng
+ * yangisi emas, TO'LIQLARNING eng yangisi olinadi (eng katta qamrovning
+ * 80% idan kam bo'lmagani). Xuddi shu muammo `getDebtStatement` da ham
+ * bor va u ham qamrov bo'yicha tanlaydi.
+ *
+ * QAMROV: HAR BIR XODIM, lekin FAQAT O'Z BIRIKTIRILGAN FIRMALARI bo'yicha
+ * (`companyScopeWhere`) — matritsada u allaqachon shu firmalarni ko'radi.
+ *
+ * Nega senior emas (2026-09-07 da ataylab o'zgartirildi): xodim o'zi
+ * yuritayotgan firma to'lovni qilmagan bo'lsa ham oyligini oladi va buni
+ * KO'RIB TURISHI kerak — shunda u pulni undirishga o'zi ham harakat qiladi.
+ * Bu qarzdorlik ekranini ochish EMAS: xodim boshqa firmaning qarzini ham,
+ * umumiy jamini ham ko'rmaydi, faqat o'z qatoridagi raqamni ko'radi.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * SHU OYDA TUSHGAN PUL — IKKI KESIMDAN CHIQARILADI
+ * ─────────────────────────────────────────────────────────────────────────
+ *
+ * 1C kesim hisoboti to'lovni KO'RSATMAYDI (2026-09-07 da 01.09 fayli
+ * o'lchandi: "Продано/Оплачено" ustunlari bor, lekin hammasi NOL). ASRO
+ * bazasida esa to'lovlar deyarli kiritilmagan — 16 ta taqsimot. Shuning
+ * uchun matritsadagi ustun har qatorda "0 / 5,000,000" deb turardi va
+ * "kim to'ladi?" savoliga javob bermasdi.
+ *
+ * Javob ikki kesim orasidagi harakatdan chiqadi:
+ *
+ *     tushgan pul = ochilish qoldig'i + shu oy hisoblanmasi − yopilish qoldig'i
+ *
+ * Qoldiq SOF olinadi (qarz − avans): ortiqcha to'lov keyingi oyga avans
+ * bo'lib o'tadi va identifikatsiya o'z-o'zidan to'g'ri ishlaydi.
+ * Hisoblanma sifatida shartnoma oylik summasi olinadi
+ * (`expectedByCompany` — ustundagi "kutilgan" bilan AYNAN bir raqam).
+ *
+ * TAXMIN QILINMAYDIGAN HOLATLAR `null` qaytaradi:
+ *   - firma ikkala kesimning birida yo'q (qamrov to'liq emas);
+ *   - natija manfiy — demak 1C dagi hisoblanma shartnoma summasidan katta
+ *     (bir martalik РК ishi, tuzatma). Prodda 176 firmadan 12 tasi shunday.
+ * Ular ekranda "—" bo'lib turadi.
+ */
+export interface PeriodDebtByCompany {
+  /** Yopilish kesimi (ISO) — ekranda ko'rsatiladi, taxmin qolmasin. */
+  asOf: string | null;
+  /** Ochilish kesimi — shu oyda tushgan pulni chiqarish uchun ishlatilgani. */
+  openingAsOf: string | null;
+  byCompany: Record<
+    string,
+    {
+      debt: number;
+      advance: number;
+      /**
+       * SHU OYDA TUSHGAN PUL — ikki kesim va oylik summadan chiqarilgan
+       * (pastdagi izohga qarang). `null` = chiqarib bo'lmadi (firma ikkala
+       * kesimda ham yo'q yoki natija manfiy) — ekranda "—" bo'lib turadi,
+       * NOL EMAS: "to'lamadi" bilan "bilmayman" bir xil ko'rinmasin.
+       */
+      collected: number | null;
+    }
+  >;
+}
+
+export async function getPeriodDebtByCompany(period: string): Promise<PeriodDebtByCompany> {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+  const actor = { userId: session.user.id as string, role: session.user.role as string };
+  if (!/^\d{4}-\d{2}$/.test(period)) throw new Error("Davr formati noto'g'ri (YYYY-MM)");
+
+  const isAdmin = isAdminRole(actor.role);
+  const scopedIds = isAdmin
+    ? null
+    : (
+        await prisma.company.findMany({
+          where: companyScopeWhere({ id: actor.userId, role: actor.role }),
+          select: { id: true },
+        })
+      ).map((c) => c.id);
+  const scopeWhere = scopedIds ? { companyId: { in: scopedIds } } : {};
+
+  // Davrdan KEYINGI oyning 1-kuni — shu sanagacha bo'lgan eng yangi kesim.
+  const [y, m] = period.split("-").map(Number);
+  const nextMonthStart = new Date(Date.UTC(m === 12 ? y + 1 : y, m === 12 ? 0 : m, 1));
+
+  // Nomzod kesimlar va ularning qamrovi (nechta firma bog'langan).
+  const coverage = await prisma.debtSnapshot.groupBy({
+    by: ["asOf"],
+    where: { asOf: { lte: nextMonthStart }, companyId: { not: null }, ...scopeWhere },
+    _count: { companyId: true },
+  });
+  if (coverage.length === 0) return { asOf: null, openingAsOf: null, byCompany: {} };
+
+  const maxCount = Math.max(...coverage.map((c) => c._count.companyId));
+  const full = coverage
+    .filter((c) => c._count.companyId >= maxCount * 0.8)
+    .sort((a, b) => b.asOf.getTime() - a.asOf.getTime());
+  const chosen = full[0];
+
+  // ── TO'LOV UCHUN JUFTLIK — DAVRGA QAT'IY BOG'LANGAN ────────────────────
+  //
+  // Yopilish kesimi SHU OYNING oxiriga tegishli bo'lishi shart
+  // (oy boshidan keyin, keyingi oy boshigacha), ochilish esa oy boshigacha.
+  // Busiz sentabr matritsasida AVGUST to'lovi ko'rinardi: sentabr uchun
+  // eng yangi kesim 01.09 edi va u aslida avgustning yopilishi.
+  //
+  // Juftlik topilmasa `collected` NULL bo'lib qoladi — joriy oy uchun
+  // shunday bo'ladi va bo'lishi ham kerak: oy tugamagan, 1C keyingi kesimni
+  // hali bermagan. "Bilmayman" ni nol qilib ko'rsatish har firmani
+  // "to'lamadi" deb ayblardi.
+  //
+  // Yarim qamrovli kesim ikkala tomonda ham ishlatilmaydi (`full` ro'yxati).
+  const monthStart = new Date(Date.UTC(y, m - 1, 1));
+  // Chegara kesimi oy CHETIDA turishi kerak. 1C ni odatda keyingi oyning
+  // 1-kunida oladi, lekin 31-sanada olingan fayl ham uchraydi — shuning
+  // uchun ikki kunlik bag'rikenglik. Oy O'RTASIDAGI kesim (07.08 kabi)
+  // chegara bo'la olmaydi: undan chiqarilgan raqam "oy bo'yicha tushgan
+  // pul" emas, yarim oyniki bo'lardi.
+  const EDGE_MS = 2 * 24 * 60 * 60 * 1000;
+  const nearEdge = (asOf: Date, edge: Date) =>
+    asOf <= edge && edge.getTime() - asOf.getTime() <= EDGE_MS;
+  const closingForPeriod = full.find((c) => nearEdge(c.asOf, nextMonthStart)) ?? null;
+  const openingSnapshot = closingForPeriod
+    ? (full.find((c) => nearEdge(c.asOf, monthStart)) ?? null)
+    : null;
+
+  const [rows, openingRows, expected] = await Promise.all([
+    prisma.debtSnapshot.findMany({
+      where: { asOf: chosen.asOf, companyId: { not: null }, ...scopeWhere },
+      select: { companyId: true, debt: true, advance: true },
+    }),
+    openingSnapshot && closingForPeriod
+      ? prisma.debtSnapshot.findMany({
+          where: {
+            asOf: { in: [openingSnapshot.asOf, closingForPeriod.asOf] },
+            companyId: { not: null },
+            ...scopeWhere,
+          },
+          select: { companyId: true, asOf: true, debt: true, advance: true },
+        })
+      : Promise.resolve([]),
+    expectedByCompany(prisma, period),
+  ]);
+
+  // Bitta firmada bir necha shartnoma qatori bo'ladi — ular QO'SHILADI.
+  // Qarz va avans ALOHIDA yig'iladi: bitta mijozda bir shartnomada qarz,
+  // boshqasida avans bo'lishi mumkin va ularni bitta raqamga qo'shish
+  // ikkalasini ham yashirardi.
+  const byCompany: Record<string, { debt: number; advance: number; collected: number | null }> = {};
+  for (const r of rows) {
+    const cid = r.companyId as string;
+    const prev = byCompany[cid] ?? { debt: 0, advance: 0, collected: null };
+    byCompany[cid] = {
+      debt: prev.debt + Number(r.debt),
+      advance: prev.advance + Number(r.advance),
+      collected: null,
+    };
+  }
+
+  // SOF qoldiq (qarz − avans) — ochilish va yopilish bo'yicha alohida.
+  // Yopilish `byCompany` dan OLINMAYDI: u eng yangi kesimdan chizilgan va
+  // davr yopilishi bilan bir xil bo'lmasligi mumkin.
+  const netAt = (when: Date) => {
+    const out = new Map<string, number>();
+    for (const r of openingRows) {
+      if (r.asOf.getTime() !== when.getTime()) continue;
+      const cid = r.companyId as string;
+      out.set(cid, (out.get(cid) ?? 0) + Number(r.debt) - Number(r.advance));
+    }
+    return out;
+  };
+
+  if (openingSnapshot && closingForPeriod) {
+    const opening = netAt(openingSnapshot.asOf);
+    const closing = netAt(closingForPeriod.asOf);
+    for (const [cid, v] of Object.entries(byCompany)) {
+      const o = opening.get(cid);
+      const c = closing.get(cid);
+      if (o === undefined || c === undefined) continue; // qamrovda yo'q — taxmin qilinmaydi
+      const collected = o + (expected.get(cid) ?? 0) - c;
+      // Manfiy = 1C dagi hisoblanma shartnoma summasidan katta (РК ishi,
+      // tuzatma). Nolga yaxlitlash SOXTA "to'lamadi" bo'lardi — `null` qoladi.
+      v.collected = collected < -1 ? null : Math.max(0, collected);
+    }
+  }
+
+  return serialize({
+    asOf: chosen.asOf.toISOString(),
+    openingAsOf: openingSnapshot ? openingSnapshot.asOf.toISOString() : null,
+    byCompany,
+  });
 }
 
 export async function getDebtComparison() {

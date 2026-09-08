@@ -19,6 +19,7 @@ import { resolveServiceTerm, roundToMonthStart } from "@/lib/terms";
 import { periodKeyOf } from "@/lib/periods";
 import { buildInvoiceLines, nextInvoiceNumber } from "@/lib/invoiceBuild";
 import { getCollectedByCompany } from "@/lib/payrollCollected";
+import { expectedByCompany } from "@/lib/debt";
 import { updateTag } from "next/cache";
 
 async function requireSenior() {
@@ -322,25 +323,15 @@ export async function getPeriodPaymentStatus(
   if (!session) throw new Error("Unauthorized");
   if (!PERIOD_RE.test(period)) throw new Error("Davr formati noto'g'ri (YYYY-MM)");
 
-  const monthStart = new Date(`${period}-01T00:00:00Z`);
-
-  const expected = await prisma.$queryRaw<{ company_id: string; amount: number }[]>`
-    SELECT c.id AS company_id, t."totalAmount"::float8 AS amount
-      FROM "Company" c
-      JOIN LATERAL (
-             SELECT "totalAmount" FROM "CompanyServiceTerm" st
-              WHERE st."companyId" = c.id
-                AND st."effectiveFrom" <= ${monthStart}
-                AND (st."effectiveTo" IS NULL OR st."effectiveTo" > ${monthStart})
-              ORDER BY st."effectiveFrom" DESC LIMIT 1
-           ) t ON true
-     WHERE c."isActive" AND NOT c."isOwnFirm"`;
+  // Kutilgan summa — `lib/debt.ts#expectedByCompany` (yagona manba: xuddi
+  // shu raqamdan `server/debt.ts` 1C kesimlaridan to'lovni chiqaradi).
+  const expected = await expectedByCompany(prisma, period);
 
   const collected = await getCollectedByCompany(period);
 
   const out: Record<string, { expected: number; collected: number }> = {};
-  for (const e of expected) {
-    out[e.company_id] = { expected: Number(e.amount ?? 0), collected: collected[e.company_id] ?? 0 };
+  for (const [companyId, amount] of expected) {
+    out[companyId] = { expected: amount, collected: collected[companyId] ?? 0 };
   }
   // Shartnoma summasi yo'q, lekin pul tushgan firma ham ko'rinsin — aks holda
   // u matritsada "ma'lumot yo'q" bo'lib qolardi.

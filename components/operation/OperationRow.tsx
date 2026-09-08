@@ -25,14 +25,18 @@ export const OperationRow = React.memo<{
   userRole: string;
   relations: CompanyRelation[];
   activeServices: string[];
-  payment?: { expected: number; collected: number };
+  /** `collected: null` — "bilmayman" (nol bilan bir xil emas). */
+  payment?: { expected: number; collected: number | null; source?: "1c" | "asro" | null };
+  /** 1C kesimi bo'yicha qarz/avans — to'lov katagining uchinchi qatori. */
+  debt?: { debt: number; advance: number; collected?: number | null };
   showPayment: boolean;
+  showDebt: boolean;
   proofMeta: Map<string, ProofMeta>;
   onCellUpdate: (companyId: string, colKey: string, newValue: string) => void;
   onCompanySelect: (companyId: string) => void;
   onRequestSubmit: (companyId: string, colKey: string) => void;
   onViewProof: (companyId: string, colKey: string) => void;
-}>(({ row, idx, visibleColumns, userRole, relations, activeServices, payment, showPayment, proofMeta, onCellUpdate, onCompanySelect, onRequestSubmit, onViewProof }) => {
+}>(({ row, idx, visibleColumns, userRole, relations, activeServices, payment, debt, showPayment, showDebt, proofMeta, onCellUpdate, onCompanySelect, onRequestSubmit, onViewProof }) => {
   /**
    * Xizmat yoqilganmi. To'lov yarmi HISOBOT yarmidan meros oladi — uning o'z
    * katakchasi hech qaysi sozlash ekranida yo'q (lib/reportColumns.ts).
@@ -52,6 +56,35 @@ export const OperationRow = React.memo<{
   const proofStatusOf = (colKey: string) => proofOf(colKey)?.status;
   const proofMineOf = (colKey: string) => proofOf(colKey)?.mine === true;
   const groupEdges = useMemo(() => buildGroupEdges(visibleColumns), [visibleColumns]);
+
+  /**
+   * Katak rangi uchun: "bilmayman" (`null`) holatida rang neytral bo'lishi
+   * kerak — qizil "to'lamadi" degan xulosa, uni ma'lumotsiz chiqarib
+   * bo'lmaydi.
+   */
+  const paid = payment && payment.collected !== null
+    ? { expected: payment.expected, collected: payment.collected }
+    : undefined;
+
+  /** Katak ustidagi izoh — uch raqamning har biri qayerdan kelgani. */
+  const cellHint = (() => {
+    if (!payment && !debt) return undefined;
+    const parts: string[] = [];
+    if (payment) {
+      parts.push(
+        payment.collected === null
+          ? "Tushgan pul: noma'lum (1C kesimidan chiqarib bo'lmadi, ASRO da ham yozuv yo'q)"
+          : `Tushgan pul: ${formatNum(payment.collected)} so'm` +
+              (payment.source === "1c" ? " (1C kesimlari farqidan)" : payment.source === "asro" ? " (ASRO to'lov yozuvi)" : "")
+      );
+      if (payment.expected > 0) parts.push(`Oylik shartnoma summasi: ${formatNum(payment.expected)} so'm`);
+    }
+    if (debt && (debt.debt > 0 || debt.advance > 0)) {
+      if (debt.debt > 0) parts.push(`1C bo'yicha qarz: ${formatNum(debt.debt)} so'm`);
+      if (debt.advance > 0) parts.push(`Avans (keyingi oyga o'tadi): ${formatNum(debt.advance)} so'm`);
+    }
+    return parts.join("\n");
+  })();
 
   return (
     // Gorizontal chiziq `<tr>` da EMAS, `.matrix-grid td` da (globals.css).
@@ -81,14 +114,47 @@ export const OperationRow = React.memo<{
         </div>
       </td>
       {showPayment && (
-        <td className="px-1.5 py-1.5 text-right whitespace-nowrap" style={{ borderRight: '2px solid var(--border)', background: paymentCellBg(payment) }}>
-          <div className="text-micro font-bold tabular-nums" style={{ color: paymentCellColor(payment) }}>
-            {payment ? formatNum(payment.collected) : '—'}
+        <td
+          className="px-1.5 py-1.5 text-right whitespace-nowrap"
+          style={{ borderRight: '2px solid var(--border)', background: paymentCellBg(paid) }}
+          title={cellHint}
+        >
+          {/* 1-QATOR — SHU OYDA TUSHGAN PUL.
+              `null` bo'lsa "—": ilgari bu yerda har doim raqam chizilardi va
+              ma'lumot yo'qligi NOL bo'lib ko'rinardi, ya'ni to'lagan firma
+              ham "to'lamadi" bo'lib turardi. */}
+          <div className="text-micro font-bold tabular-nums" style={{ color: paymentCellColor(paid) }}>
+            {payment && payment.collected !== null ? formatNum(payment.collected) : '—'}
           </div>
           {payment && payment.expected > 0 && (
             <div className="text-2xs tabular-nums" style={{ color: 'var(--text-3)' }}>
               / {formatNum(payment.expected)}
             </div>
+          )}
+          {/* 3-QATOR — 1C QOLDIG'I: qarz (qizil) va/yoki avans (yashil).
+              Avans = ortiqcha to'langan pul, u keyingi oyga o'tadi.
+              QARZ VA AVANS QO'SHILMAYDI: bitta mijozning bir shartnomasida
+              qarz, boshqasida avans bo'ladi (`server/debt.ts` izohi). */}
+          {showDebt && (
+            debt && (debt.debt > 0 || debt.advance > 0) ? (
+              <div
+                className="text-2xs tabular-nums font-semibold"
+                title={`1C kesimi: qarz ${formatNum(debt.debt)}${debt.advance > 0 ? `, avans ${formatNum(debt.advance)}` : ""} so'm`}
+              >
+                {debt.debt > 0 && (
+                  <span style={{ color: 'var(--danger)' }}>{formatNum(debt.debt)}</span>
+                )}
+                {debt.debt > 0 && debt.advance > 0 && <span style={{ color: 'var(--text-3)' }}> · </span>}
+                {debt.advance > 0 && (
+                  <span style={{ color: 'var(--success)' }}>+{formatNum(debt.advance)}</span>
+                )}
+              </div>
+            ) : (
+              // Kesimda qatori YO'Q firma — "qarzi yo'q" DEGANI EMAS: u
+              // 1C fayliga tushmagan yoki bog'lanmagan bo'lishi mumkin.
+              // Shuning uchun 0 emas, chiziqcha.
+              <div className="text-2xs" style={{ color: 'var(--text-3)' }} title="1C kesimida bu firma yo'q">·</div>
+            )
           )}
         </td>
       )}

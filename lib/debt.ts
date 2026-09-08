@@ -318,6 +318,37 @@ export function computeCompanyDebt(input: CompanyDebtInput): CompanyDebtBreakdow
  * qaysi biri KEYINROQ bo'lsa. Shartnomasi 2026-09 da imzolangan firmaga
  * 2026-07 dan hisob qo'yish soxta qarz yaratardi.
  */
+/**
+ * SHU OYDA KUTILAYOTGAN SUMMA — firma bo'yicha (`CompanyServiceTerm`).
+ *
+ * YAGONA MANBA: bir xil so'rov `server/invoices.ts` (matritsaning "To'lov"
+ * ustuni) va `server/debt.ts` (1C kesimlaridan to'lovni chiqarish) da
+ * kerak. Ikki nusxa bo'lsa, biri "faol firma" yoki "o'z firmamiz" shartini
+ * unutib, ikki ekranda ikki xil "kutilgan" chiqarardi.
+ *
+ * Shart amal qilgan oy — davrning 1-kuni bo'yicha (`effectiveFrom <= oy <
+ * effectiveTo`), ya'ni oy o'rtasida o'zgargan tarif keyingi oydan hisobga
+ * kiradi.
+ */
+export async function expectedByCompany(
+  db: Pick<Prisma.TransactionClient, "$queryRaw">,
+  period: string
+): Promise<Map<string, number>> {
+  const monthStart = new Date(`${period.slice(0, 7)}-01T00:00:00Z`);
+  const rows = await db.$queryRaw<{ company_id: string; amount: number }[]>`
+    SELECT c.id AS company_id, t."totalAmount"::float8 AS amount
+      FROM "Company" c
+      JOIN LATERAL (
+             SELECT "totalAmount" FROM "CompanyServiceTerm" st
+              WHERE st."companyId" = c.id
+                AND st."effectiveFrom" <= ${monthStart}
+                AND (st."effectiveTo" IS NULL OR st."effectiveTo" > ${monthStart})
+              ORDER BY st."effectiveFrom" DESC LIMIT 1
+           ) t ON true
+     WHERE c."isActive" AND NOT c."isOwnFirm"`;
+  return new Map(rows.map((r) => [r.company_id, Number(r.amount ?? 0)]));
+}
+
 export function billingStartFor(contractDate: Date | null | undefined): string {
   if (!contractDate) return BILLING_START_PERIOD;
   const fromContract = periodKeyOf(contractDate);

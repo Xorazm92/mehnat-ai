@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import OperationModule from "@/components/OperationModule";
 import HisobotlarModule from "@/components/HisobotlarModule";
 import { getPeriodPaymentStatus } from "@/server/invoices";
+import { getPeriodDebtByCompany } from "@/server/debt";
 import { Company, Staff, OperationEntry } from "@/types";
 import type { ReportColumn } from "@/lib/reportColumns";
 import { FileText, Grid3x3 } from "lucide-react";
@@ -80,6 +81,17 @@ export default function ReportsClient({
     Record<string, { expected: number; collected: number }> | undefined
   >(undefined);
 
+  // 1C QARZI — o'sha ustunning ikkinchi yarmi. Alohida o'qiladi, chunki
+  // manbasi ham, darvozasi ham boshqa: to'lov ASRO bazasidan (har qanday
+  // sessiya), qarz esa 1C kesimidan va faqat senior rollarga, portfel
+  // doirasida (`server/debt.ts` izohiga qarang). Xato bo'lsa — jimgina
+  // qarzsiz chiziladi, matritsadagi ish yuzasi bloklanmaydi.
+  const [debtByCompany, setDebtByCompany] = useState<
+    Record<string, { debt: number; advance: number; collected: number | null }> | undefined
+  >(undefined);
+  const [debtAsOf, setDebtAsOf] = useState<string | null>(null);
+  const [debtOpeningAsOf, setDebtOpeningAsOf] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     getPeriodPaymentStatus(selectedPeriod)
@@ -89,10 +101,59 @@ export default function ReportsClient({
       .catch(() => {
         if (!cancelled) setPaymentByCompany(undefined);
       });
+    getPeriodDebtByCompany(selectedPeriod)
+      .then((r) => {
+        if (cancelled) return;
+        setDebtByCompany(r.byCompany);
+        setDebtAsOf(r.asOf);
+        setDebtOpeningAsOf(r.openingAsOf);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setDebtByCompany(undefined);
+        setDebtAsOf(null);
+        setDebtOpeningAsOf(null);
+      });
     return () => {
       cancelled = true;
     };
   }, [selectedPeriod]);
+  /**
+   * USTUNNING YUQORIGI RAQAMI — "shu oyda tushgan pul".
+   *
+   * IKKI MANBA, ANIQ TARTIB BILAN: avval 1C kesimlaridan chiqarilgani
+   * (`server/debt.ts` — 1C buxgalteriya haqiqati), u yo'q bo'lsa ASRO ning
+   * o'z to'lov yozuvi. Ilgari faqat ikkinchisi ishlatilardi va u deyarli
+   * bo'sh bo'lgani uchun ustun hamma qatorda "0 / 5,000,000" deb turardi.
+   *
+   * `collected: null` — 1C dan chiqarib bo'lmadi (firma kesimda yo'q yoki
+   * hisoblanma shartnoma summasidan katta). Bunda ham ASRO raqamiga
+   * qaytamiz; u ham bo'lmasa katak "—" ko'rsatadi ("to'lamadi" EMAS).
+   */
+  const moneyByCompany = useMemo(() => {
+    if (!paymentByCompany && !debtByCompany) return undefined;
+    const ids = new Set([
+      ...Object.keys(paymentByCompany ?? {}),
+      ...Object.keys(debtByCompany ?? {}),
+    ]);
+    const out: Record<
+      string,
+      { expected: number; collected: number | null; source: "1c" | "asro" | null }
+    > = {};
+    for (const id of ids) {
+      const p = paymentByCompany?.[id];
+      const fromSnapshot = debtByCompany?.[id]?.collected ?? null;
+      const asro = p?.collected ?? 0;
+      out[id] =
+        fromSnapshot !== null
+          ? { expected: p?.expected ?? 0, collected: fromSnapshot, source: "1c" }
+          : asro > 0
+            ? { expected: p?.expected ?? 0, collected: asro, source: "asro" }
+            : { expected: p?.expected ?? 0, collected: null, source: null };
+    }
+    return out;
+  }, [paymentByCompany, debtByCompany]);
+
   // Skrinshot havolasi (`?company=&col=`) har doim matritsani ochadi — u
   // havolaning butun maqsadi.
   const [tab, setTab] = useTabParam<ReportsTabId>(
@@ -150,7 +211,10 @@ export default function ReportsClient({
             focusProof={hasFocus ? { companyId: focusCompany as string, colKey: focusCol as string } : null}
             reportColumns={reportColumns}
             obligationCoverage={obligationCoverage}
-            paymentByCompany={paymentByCompany}
+            paymentByCompany={moneyByCompany}
+            debtByCompany={debtByCompany}
+            debtAsOf={debtAsOf}
+            debtOpeningAsOf={debtOpeningAsOf}
             selectedPeriod={selectedPeriod}
             onPeriodChange={setSelectedPeriod}
             onCompanySelect={() => {}}

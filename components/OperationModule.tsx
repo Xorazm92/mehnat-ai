@@ -98,7 +98,31 @@ interface Props {
    * Buxgalter kechikkan hisobotni ko'rib, uning to'lanmagan firma ekanini
    * bilishi uchun ikkinchi ekranga o'tishi kerak edi.
    */
-  paymentByCompany?: Record<string, { expected: number; collected: number }>;
+  /**
+   * companyId → shu davrda kutilgan va TUSHGAN pul.
+   *
+   * `collected: null` — "bilmayman" (1C kesimidan chiqarib bo'lmadi va
+   * ASRO da ham yozuv yo'q). U NOL BILAN BIR XIL EMAS va ekranda "—" bo'lib
+   * ko'rinadi: "to'lamadi" degan xulosa faqat haqiqiy nolda chiqarilishi
+   * kerak. `source` — raqam qaysi manbadan (izohda ko'rsatiladi).
+   */
+  paymentByCompany?: Record<
+    string,
+    { expected: number; collected: number | null; source?: "1c" | "asro" | null }
+  >;
+  /**
+   * companyId → 1C kesimi bo'yicha qarz/avans (`getPeriodDebtByCompany`).
+   *
+   * NEGA TO'LOV USTUNIDA. Tushgan pul ASRO yozuvidan keladi va to'lovlar
+   * hali tizimga kiritilmagani uchun ustun deyarli hamma qatorda "0 / X"
+   * bo'lib turardi. 1C qarzi — o'sha savolning javobi bor yagona manba.
+   * To'lovni ALMASHTIRMAYDI, yonida turadi.
+   */
+  debtByCompany?: Record<string, { debt: number; advance: number; collected?: number | null }>;
+  /** Yopilish kesimi (ISO) — ustun sarlavhasidagi izohda va legendada. */
+  debtAsOf?: string | null;
+  /** Ochilish kesimi — "tushgan pul" shu ikkisining farqidan chiqarilgan. */
+  debtOpeningAsOf?: string | null;
 }
 
 
@@ -118,9 +142,15 @@ const OperationModule: React.FC<Props> = ({
   focusProof,
   reportColumns,
   obligationCoverage,
-  paymentByCompany
+  paymentByCompany,
+  debtByCompany,
+  debtAsOf,
+  debtOpeningAsOf
 }) => {
-  const showPayment = !!paymentByCompany;
+  const showPayment = !!paymentByCompany || !!debtByCompany;
+  /** "2026-09-01T…" → "01.09.2026" (`lib/format` mijoz uchun sana emas, ISO kesim sanasi). */
+  const dmy = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
+  const showDebt = !!debtByCompany;
   // Amaldagi ustunlar: admin config qo'llangan ro'yxat yoki baza.
   // useMemo — barqaror referens (faqat prop o'zgarganda yangilanadi).
   const REPORT_COLUMNS = useMemo<ReportColumn[]>(() => reportColumns ?? BASE_REPORT_COLUMNS, [reportColumns]);
@@ -1434,6 +1464,31 @@ const OperationModule: React.FC<Props> = ({
             <span className="text-micro font-bold px-1.5 py-0.5 rounded-lg tracking-tighter" style={{ background: tint('var(--warning)', 12), color: 'var(--warning)', border: `1px solid ${tint('var(--warning)', 24)}` }}>#100</span>
             <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Byudjet to&apos;lov kodi</span>
           </div>
+          {/* 1C QARZI — kesim SANASI aytiladi. U tanlangan davrga qarab
+              o'zgaradi (eng yangi mos kesim) va sanasi ko'rinmasa, ekrandagi
+              qizil raqam qaysi kunga tegishli ekani noma'lum bo'lardi. */}
+          {/* DAVR YOPILMAGAN — "tushgan pul" ustuni butun ustun bo'ylab "—".
+              Busiz ekran "hech kim to'lamadi" bo'lib ko'rinardi: bugun
+              sentabr, 1C ning 01.10 kesimi esa oy tugagach keladi. */}
+          {showDebt && !debtOpeningAsOf && (
+            <div className="flex items-center gap-2 shrink-0 ml-4 border-l pl-4" style={{ borderColor: 'var(--border)' }}>
+              <span className="text-micro font-bold px-1.5 py-0.5 rounded-lg uppercase tracking-tighter" style={{ background: tint('var(--warning)', 12), color: 'var(--warning)', border: `1px solid ${tint('var(--warning)', 24)}` }}>—</span>
+              <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
+                Bu davr uchun to&apos;lov ma&apos;lumoti yo&apos;q — 1C yopilish kesimi oy tugagach keladi
+              </span>
+            </div>
+          )}
+          {showDebt && (
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-micro font-bold px-1.5 py-0.5 rounded-lg tabular-nums" style={{ background: tint('var(--danger)', 12), color: 'var(--danger)', border: `1px solid ${tint('var(--danger)', 24)}` }}>1C</span>
+              <span className="text-micro font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>
+                Qarz · avans
+                {debtAsOf
+                  ? ` — ${debtOpeningAsOf ? `${dmy(debtOpeningAsOf)} → ` : ''}${dmy(debtAsOf)} kesimi`
+                  : " (kesim yo'q)"}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1497,9 +1552,20 @@ const OperationModule: React.FC<Props> = ({
                     rowSpan={2}
                     className="sticky top-0 px-1.5 py-1.5 text-center text-micro font-extrabold uppercase tracking-wider w-24 min-w-[96px]"
                     style={{ background: 'var(--surface-2)', color: 'var(--text-2)', borderBottom: '2px solid var(--border)', borderRight: '2px solid var(--border)' }}
-                    title="Shu davrda tushgan pul / kutilgan summa"
+                    title={
+                      "1-qator: shu oyda tushgan pul\n2-qator: oylik shartnoma summasi" +
+                      (showDebt
+                        ? "\n3-qator: 1C qoldig'i — qizil qarz, yashil avans (keyingi oyga o'tadi)" +
+                          (debtAsOf ? `\nKesim: ${debtOpeningAsOf ? `${debtOpeningAsOf.slice(0, 10)} → ` : ""}${debtAsOf.slice(0, 10)}` : "")
+                        : "")
+                    }
                   >
                     To&apos;lov
+                    {showDebt && !debtOpeningAsOf && (
+                      <span className="block text-2xs font-bold normal-case tracking-normal" style={{ color: 'var(--warning)' }}>
+                        oy yopilmagan
+                      </span>
+                    )}
                   </th>
                 )}
                 {headerBands.map((band, i) => {
@@ -1606,7 +1672,9 @@ const OperationModule: React.FC<Props> = ({
                     relations={(row.companyId && relationsByCompany.get(row.companyId)) || EMPTY_RELATIONS}
                     activeServices={row.activeServices}
                     payment={row.companyId ? paymentByCompany?.[row.companyId] : undefined}
+                    debt={row.companyId ? debtByCompany?.[row.companyId] : undefined}
                     showPayment={showPayment}
+                    showDebt={showDebt}
                     proofMeta={proofMeta}
                     onCellUpdate={handleCellUpdate}
                     onCompanySelect={handleCompanySelect}

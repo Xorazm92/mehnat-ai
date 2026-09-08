@@ -36,6 +36,13 @@ const SOURCES = [
   { file: "31.07.2026 qarzdorlik.json", asOf: new Date(Date.UTC(2026, 6, 31)), label: "hisoblanmagacha" },
   // STIRli variant — nomi bo'yicha taxmin qilish o'rniga aniq kalit beradi.
   { file: "01.08.2026. qani qarzdorlik (2).json", asOf: new Date(Date.UTC(2026, 7, 1)), label: "hisoblanmadan keyin" },
+  // 01.09 — SENTABR BOSHIDAGI holat (avgust haqi yozilgan). Fayl AYLANMA
+  // ko'rinishida eksport qilingan: "Долг/Аванс" yonida "Продано/Оплачено/
+  // Поступило" ustunlari ham bor. Ular O'QILMAYDI va o'qilishi ham shart
+  // emas — faylda ularning hammasi NOL (2026-09-07 da o'lchandi: ochilish
+  // 5 385 140 000 = yopilish, aylanma 0). Ya'ni bu ham oddiy kesim, faqat
+  // ustunlari ko'proq; parser "Долг" ustunini nomi bo'yicha topadi.
+  { file: "01.09.2026 QARZDORLIK.json", asOf: new Date(Date.UTC(2026, 8, 1)), label: "hisoblanmadan keyin" },
 ];
 
 /** Shartnoma raqamini solishtirish uchun — kirill/lotin aralash yoziladi. */
