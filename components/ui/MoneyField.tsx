@@ -66,7 +66,11 @@ export function MoneyField({
 
   const handle = (raw: string) => {
     // Faqat raqamlar qoladi — foydalanuvchi bo'shliq yoki vergul qo'ysa ham.
-    const digits = ungroupDigits(raw).replace(/\D/g, "");
+    // BOSHIDAGI NOLLAR ham tashlanadi: maydon "0" bilan ochilgan formada
+    // (masalan xarajat oynasi) terilgan raqam "0 216 520" bo'lib ko'rinardi —
+    // qiymat to'g'ri, lekin ko'z bilan o'qib bo'lmasdi va bir tiyinlik
+    // xatoga o'xshab turardi. Yakka "0" saqlanadi.
+    const digits = ungroupDigits(raw).replace(/\D/g, "").replace(/^0+(?=\d)/, "");
     setText(digits ? groupDigits(digits) : "");
     onChange(digits ? Number(digits) : null);
   };
@@ -87,7 +91,12 @@ export function MoneyField({
         aria-invalid={aria["aria-invalid"]}
         aria-describedby={aria["aria-describedby"]}
         aria-required={aria["aria-required"] ?? required}
-        className={`erp-input w-full text-right font-mono tabular-nums ${suffix ? "pr-12" : ""}`}
+        // O'NG PADDING INLINE. `.erp-input` (globals.css) `padding` ni
+        // QISQARTMA bilan beradi va u hech qanday `@layer` da emas, ya'ni
+        // Tailwind ning `pr-12` utilitasidan ustun turadi — "so'm" yozuvi
+        // raqam ustiga chiqib ketardi. Inline uslub esa har doim yutadi.
+        style={suffix ? { paddingRight: "3rem" } : undefined}
+        className="erp-input w-full text-right font-mono tabular-nums"
       />
       {suffix && (
         <span

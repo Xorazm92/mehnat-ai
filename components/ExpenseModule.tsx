@@ -435,7 +435,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                 />
                 {/* "Yangi xarajat" — YARATISH amali, `danger` (qizil) emas:
                     qizil holat rangi xato/o'chirish ma'nosida qolishi kerak. */}
-                <Button variant="primary" size="md" onClick={() => { setSalaryFor({ employeeId: '', month: periodKeyOf(new Date()) }); setEditingExpense({ date: todayKey(), category: defaultCategory, amount: 0 }); setIsModalOpen(true); }} className="whitespace-nowrap">
+                <Button variant="primary" size="md" onClick={() => { setSalaryFor({ employeeId: '', month: periodKeyOf(new Date()) }); setEditingExpense({ date: todayKey(), category: defaultCategory }); setIsModalOpen(true); }} className="whitespace-nowrap">
                     <Plus size={16} />
                     <span>Yangi xarajat</span>
                 </Button>
