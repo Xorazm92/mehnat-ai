@@ -603,6 +603,49 @@ export async function runReconciliation(db: Db): Promise<ReconCheck[]> {
     action: drifted > 0 ? "Firma kartochkasi → Jamoa tabini ochib qayta saqlang" : undefined,
   });
 
+  // ── OYLIK BITTA UYDA ──────────────────────────────────────────────────
+  //
+  // Oylik `Payout` orqali beriladi va balansdan SHU YO'L bilan chiqadi
+  // (`lib/balance.ts` `outflowPayroll`). Uni yana kassa chiqimi qilib yozish
+  // bitta pulni IKKI MARTA hisoblaydi — shuning uchun oylik toifasi
+  // `KassaEntry` da taqiqlangan (`lib/salaryCategory.ts`, `lib/cashGate.ts`).
+  //
+  // Ammo taqiq YOZUV yo'liga qo'yilgan, TARIXGA emas. Prod jurnalida
+  // (2026-09-11) `KassaEntry → SALARY_EXPENSE` bo'yicha netto 660 314 246
+  // so'm turibdi — taqiqdan oldingi import qoldig'i. Shu qatorlar tirik
+  // ekan, oylik ikki manbadan sanaladi va `Payout` yo'liga to'liq o'tib
+  // bo'lmaydi.
+  //
+  // Bu tekshiruv aynan shu qoldiqni ko'rsatadi. Hech narsa tuzatilmaydi:
+  // storno qilishda qarshi hisob (SALARY_EXPENSE ↔ CASH) qat'iy nazorat
+  // talab qiladi, aks holda kassa qoldig'i sun'iy shishadi.
+  const salaryHomes = await db.$queryRaw<{ cnt: bigint; total: number }[]>`
+    SELECT count(*)::bigint AS cnt, coalesce(sum(k.amount), 0)::float8 AS total
+      FROM "KassaEntry" k
+     WHERE k."deletedAt" IS NULL
+       AND k.type = 'expense'
+       AND k.category ~* 'oylik|ish\\s*haqi|mehnat\\s*haqi|maosh|zarplata|зарплат|ойлик|иш\\s*хак'`;
+
+  const salaryInKassa = n(salaryHomes[0]?.cnt);
+  const salaryInKassaSum = n(salaryHomes[0]?.total);
+
+  checks.push({
+    key: "salary-single-home",
+    title: "Oylik faqat Payout orqali",
+    status: salaryInKassa === 0 ? "ok" : "error",
+    value: salaryInKassaSum,
+    detail:
+      salaryInKassa === 0
+        ? "Kassa chiqimlarida oylik toifali yozuv yo'q — oylik faqat Payout jadvalida"
+        : `${salaryInKassa} ta kassa chiqimi oylik toifasida ` +
+          `(${formatNum(salaryInKassaSum)} so'm) — bu Payout bilan birga ikki marta sanaladi`,
+    action:
+      salaryInKassa > 0
+        ? "Taqiqdan oldingi import qoldig'i. Storno qilishda qarshi hisob " +
+          "(SALARY_EXPENSE ↔ CASH) tekshirilsin — aks holda kassa qoldig'i shishadi."
+        : undefined,
+  });
+
   return checks;
 }
 

@@ -103,6 +103,49 @@ describe("runReconciliation", () => {
     const leftover = await prisma.ledgerEntry.count({ where: { transactionId: TAG } });
     expect(leftover, "test qator bazada qolib ketdi").toBe(0);
   }, 90_000);
+
+  /**
+   * OYLIK IKKI UYDA — `salary-single-home`.
+   *
+   * Oylik `Payout` orqali beriladi va balansdan shu yo'l bilan chiqadi.
+   * Kassa chiqimi sifatida ham yozilsa, bitta pul ikki marta sanaladi.
+   * Yozuv yo'li buni taqiqlaydi (`lib/cashGate.ts`), lekin TARIX taqiqdan
+   * oldin yozilgan — prodda 660 mln so'mlik qoldiq bor. Bu tekshiruv
+   * qoldiqni ko'rsatadi, shuning uchun uning o'zi ishlashi shart.
+   */
+  it("kassada oylik toifali chiqim bo'lsa `salary-single-home` xato beradi", async () => {
+    await expect(
+      prisma.$transaction(
+        async (tx) => {
+          await tx.kassaEntry.create({
+            data: {
+              type: "expense",
+              // Toifa `SALARY_CATEGORY_RE` ga tushadi — aynan shu aniqlanishi kerak.
+              category: "Oylik",
+              amount: 1_234_567,
+              date: new Date("2099-11-01T00:00:00.000Z"),
+              description: TAG,
+              status: "approved",
+            },
+          });
+
+          const after = await runReconciliation(tx);
+          const salary = after.find((c) => c.key === "salary-single-home");
+          expect(salary, "`salary-single-home` tekshiruvi yo'q").toBeDefined();
+          expect(salary?.status, "oylik toifali kassa chiqimi xato bermadi").toBe("error");
+          // Summa yig'indiga kirgan bo'lishi kerak — faqat sanoq emas.
+          expect(salary!.value, "summa hisobga olinmadi").toBeGreaterThanOrEqual(1_234_567);
+          expect(salary?.action, "xato bor, lekin harakat aytilmagan").toBeTruthy();
+
+          throw new Rollback();
+        },
+        { timeout: 60_000 }
+      )
+    ).rejects.toBeInstanceOf(Rollback);
+
+    const leftover = await prisma.kassaEntry.count({ where: { description: TAG } });
+    expect(leftover, "test qator bazada qolib ketdi").toBe(0);
+  }, 90_000);
 });
 
 describe("worstStatus", () => {

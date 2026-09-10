@@ -24,6 +24,7 @@
     "obligations:generate": "tsx scripts/generate-obligations.ts",
     "verify:clean-start": "tsx scripts/verify-clean-start.ts",
     "verify:kassa": "tsx scripts/verify-kassa.ts",
+    "reconcile": "tsx scripts/reconcile.ts",
     "audit:evidence": "tsx scripts/audit-evidence.ts",
     "backfill:evidence": "tsx scripts/backfill-evidence.ts",
     "smoke:telegram": "tsx scripts/smoke-telegram-app.ts",
