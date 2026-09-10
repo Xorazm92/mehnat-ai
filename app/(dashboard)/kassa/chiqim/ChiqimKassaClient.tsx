@@ -37,6 +37,8 @@ import ExpenseModule from "@/components/ExpenseModule";
 import type { Expense, BalanceBreakdown } from "@/types";
 import { createExpense, updateExpense, deleteExpense, approveExpense, rejectExpense } from "@/server/kassa";
 import { createAvansPayout, createPayout } from "@/server/payouts";
+import { BreadcrumbTrail } from "@/components/BreadcrumbTrail";
+import { sectionCrumbs, sectionMeta } from "@/lib/navigation";
 import { usePrompt } from "@/components/ui/ConfirmDialog";
 import { DateField } from "@/components/ui/DateField";
 import { useTabParam } from "@/hooks/useTabParam";
@@ -225,6 +227,9 @@ const HOUSEHOLD_COLUMNS: DataColumn<{ period: string; total: number; count: numb
  * `Payout.channelId` qo'shilishidan OLDINGI to'lov; ular
  * `scripts/backfill-payout-channel.ts` bilan bog'lanadi.
  */
+/** Yon paneldagi ota bo'lim — sarlavha va yo'l chizig'i shundan olinadi. */
+const SECTION_ROOT = "/kassa/chiqim";
+
 const PAYOUT_COLUMNS: DataColumn<PayoutRow>[] = [
   {
     key: "employee",
@@ -326,6 +331,10 @@ export default function ChiqimKassaClient({
 
   // Reyestrdagi AVANS ulushi — "oylik" va "avans" bir jadvalda yotadi
   // (ikkalasi ham `Payout`), farqi tuzatma turida (`isAvans`).
+  // Sarlavha/ikonka joriy bo'limdan (`NAV_SECTIONS` — yon panel bilan bir manba).
+  const meta = sectionMeta(SECTION_ROOT, tab);
+  const SectionIcon = meta?.icon ?? CreditCard;
+
   const avansSummary = useMemo(() => {
     const rows = payouts.rows.filter((p) => p.isAvans);
     return { count: rows.length, total: rows.reduce((s, p) => s + p.amount, 0) };
@@ -389,14 +398,19 @@ export default function ChiqimKassaClient({
 
   return (
     <div className="p-4 md:p-6 space-y-5">
+      {/* Sarlavha JORIY BO'LIMNI ko'rsatadi ("Xarajat"), ota bo'lim esa yo'l
+          chizig'ida qoladi ("Kassa › Chiqim kassa › Xarajat") — yon paneldagi
+          band bilan sahifa sarlavhasi bir xil matn bo'ladi. */}
+      <BreadcrumbTrail crumbs={sectionCrumbs(SECTION_ROOT, tab)} />
       <PageHeader
-        title={canManageChannels ? "Chiqim kassa" : "Xarajatlar"}
+        title={meta?.label ?? (canManageChannels ? "Chiqim kassa" : "Xarajatlar")}
         description={
-          canManageChannels
+          meta?.description ??
+          (canManageChannels
             ? "Xodim kartalari orqali o'tadigan pul va kassa xarajatlari"
-            : "Kassa xarajatlarini ko'rish va tasdiqlash"
+            : "Kassa xarajatlarini ko'rish va tasdiqlash")
         }
-        icon={<CreditCard size={20} />}
+        icon={<SectionIcon size={20} />}
         actions={
           canManageChannels ? (
             <div className="flex gap-2 flex-wrap">
@@ -516,6 +530,11 @@ export default function ChiqimKassaClient({
           value={tab}
           onChange={setTab}
           ariaLabel="Chiqim kassa bo'limlari"
+          // FAQAT TELEFONDA: kompyuterda bu ro'yxat yon panelda uchinchi
+          // daraja bo'lib turibdi (`NAV_SECTIONS`), ya'ni bir xil tanlov
+          // ekranda ikki marta edi. Telefonda yon panel gamburger ortida
+          // yashirin, shuning uchun bu qator o'sha yerda qoladi.
+          className="md:hidden"
         />
       )}
 

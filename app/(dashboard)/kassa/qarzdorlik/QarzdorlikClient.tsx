@@ -15,6 +15,8 @@ import { useTableState } from "@/hooks/useTableState";
 import { usePageSize } from "@/hooks/usePageSize";
 import { useTabParam, useUrlParam } from "@/hooks/useTabParam";
 import { QARZDORLIK_TAB_IDS, QARZDORLIK_DEFAULT_TAB, type QarzdorlikTab } from "@/lib/qarzdorlikTabs";
+import { BreadcrumbTrail } from "@/components/BreadcrumbTrail";
+import { sectionCrumbs, sectionMeta } from "@/lib/navigation";
 import { DEBT_AGING_STAGES, debtAgingStage, type DebtAgingStage } from "@/lib/debtAging";
 import { useRouter } from "next/navigation";
 import KassaModule from "@/components/KassaModule";
@@ -153,6 +155,9 @@ export default function QarzdorlikClient({
   // `/kassa/qarzdorlik?tab=undirish` havolasini yuborishi mumkin va F5
   // bosilganda holat yo'qolmaydi. Ilgari bu oddiy `useState` edi.
   const [tab, setTab] = useTabParam<QarzdorlikTab>("tab", QARZDORLIK_TAB_IDS, initialTab);
+  // Sarlavha/ikonka joriy bo'limdan — yon panel bilan bir manba.
+  const meta = sectionMeta("/kassa/qarzdorlik", tab);
+  const SectionIcon = meta?.icon ?? HandCoins;
   const TAB_ITEMS: TabItem<QarzdorlikTab>[] = [
     { id: "undirish", label: "Undirish", hint: "Bugun kim bilan gaplashish kerak", count: queue.rows.length || undefined },
     { id: "holat", label: "Hisob-kitob", hint: "1C kesimi bilan yonma-yon solishtirish" },
@@ -426,16 +431,29 @@ export default function QarzdorlikClient({
 
   return (
     <div className="p-4 md:p-6 space-y-5">
+      <BreadcrumbTrail crumbs={sectionCrumbs("/kassa/qarzdorlik", tab)} />
       <PageHeader
-        title="Qarzdorlik"
+        title={meta?.label ?? "Qarzdorlik"}
         description={
-          "1C hisoboti va ASRO hisobi yonma-yon" +
+          // Bo'lim tavsifi + DAVR: "1C holati" sanasi qaysi yorliqda
+          // turishdan qat'i nazar kerak — u butun ekranning ma'lumot
+          // kesimini aytadi, shuning uchun tavsifga ulanib qoladi.
+          (meta?.description ?? "1C hisoboti va ASRO hisobi yonma-yon") +
           (debt.asOf ? ` · 1C holati: ${formatUzDate(debt.asOf)}` : "")
         }
-        icon={<HandCoins size={20} />}
+        icon={<SectionIcon size={20} />}
       />
 
-      <Tabs items={TAB_ITEMS} value={tab} onChange={setTab} ariaLabel="Qarzdorlik bo'limlari" />
+      <Tabs
+        items={TAB_ITEMS}
+        value={tab}
+        onChange={setTab}
+        ariaLabel="Qarzdorlik bo'limlari"
+        // FAQAT TELEFONDA: kompyuterda bu ro'yxat yon panelda uchinchi daraja
+        // bo'lib turibdi (`NAV_SECTIONS`) — bir xil tanlov ekranda ikki marta
+        // ko'rinardi. Telefonda yon panel gamburger ortida yashirin.
+        className="md:hidden"
+      />
 
       {tab === "holat" && (
         statement ? (

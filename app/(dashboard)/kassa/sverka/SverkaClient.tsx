@@ -25,6 +25,8 @@ import type { PosChannel } from "@/lib/pos/types";
 import { formatNum } from "@/lib/platform/format";
 import { useTabParam } from "@/hooks/useTabParam";
 import { SVERKA_TAB_IDS, type SverkaTab } from "@/lib/sverkaTabs";
+import { BreadcrumbTrail } from "@/components/BreadcrumbTrail";
+import { sectionCrumbs, sectionMeta } from "@/lib/navigation";
 
 interface Device { id: string; fmNumber: string; label: string; inn: string; siteKey: string | null }
 interface Terminal {
@@ -123,6 +125,9 @@ export default function SverkaClient({
   // Ilgari oddiy `useState` edi — global qidiruvdagi yorliq havolasi
   // har doim birinchi tabni ochardi.
   const [tab, setTab] = useTabParam<TabId>("tab", SVERKA_TAB_IDS, initialTab);
+  // Sarlavha/ikonka joriy bo'limdan — yon panel bilan bir manba.
+  const meta = sectionMeta("/kassa/sverka", tab);
+  const SectionIcon = meta?.icon ?? Scale;
   const [from, setFrom] = useState(data.range.from);
   const [to, setTo] = useState(data.range.to);
   const [pending, startTransition] = useTransition();
@@ -149,10 +154,11 @@ export default function SverkaClient({
 
   return (
     <div className="space-y-4">
+      <BreadcrumbTrail crumbs={sectionCrumbs("/kassa/sverka", tab)} />
       <PageHeader
-        title="Kassa–bank sverka"
-        icon={<Scale size={20} />}
-        description="Fiskal apparat urgan karta to'lovi bankka to'liq tushganmi — kunma-kun tekshiruv."
+        title={meta?.label ?? "Kassa–bank sverka"}
+        icon={<SectionIcon size={20} />}
+        description={meta?.description ?? "Fiskal apparat urgan karta to'lovi bankka to'liq tushganmi — kunma-kun tekshiruv."}
         actions={
           <Button
             variant="secondary"
@@ -211,7 +217,16 @@ export default function SverkaClient({
         </div>
       )}
 
-      <Tabs items={tabs} value={tab} onChange={setTab} ariaLabel="Sverka bo'limlari" />
+      <Tabs
+        items={tabs}
+        value={tab}
+        onChange={setTab}
+        ariaLabel="Sverka bo'limlari"
+        // FAQAT TELEFONDA: kompyuterda bu ro'yxat yon panelda uchinchi daraja
+        // bo'lib turibdi (`NAV_SECTIONS`) — bir xil tanlov ekranda ikki marta
+        // ko'rinardi. Telefonda yon panel gamburger ortida yashirin.
+        className="md:hidden"
+      />
 
       {tab === "sverka" && (
         <div className="space-y-3">

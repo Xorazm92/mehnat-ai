@@ -25,6 +25,17 @@ export interface PageHeaderProps {
   actions?: React.ReactNode;
   /** Sarlavha ostidagi qo'shimcha qator (filtr, tab va h.k.) */
   children?: React.ReactNode;
+  /**
+   * `children` FAQAT telefonda ko'rinadi (`md:hidden`).
+   *
+   * Kassa va Oylik ekranlarida yorliq qatori kompyuterda yon panelga ko'chdi
+   * (`NAV_SECTIONS` uchinchi darajasi) va sahifada faqat telefon uchun qoldi.
+   * Bu holatda `hasChildren` rost bo'lgani uchun sarlavha ostidagi ajratuvchi
+   * chiziq CHIZILMASDAN qolardi — kompyuterda sarlavha havoda osilib turardi.
+   * Bayroq berilganda chiziq `md:` dan boshlab qaytariladi; telefonda esa
+   * yorliqlar qatorining o'z chizig'i ishlaydi.
+   */
+  childrenMobileOnly?: boolean;
   className?: string;
   /**
    * IXCHAM REJIM — zich ish yuzalari uchun (masalan amallar matritsasi).
@@ -50,6 +61,7 @@ export function PageHeader({
   children,
   className = "",
   compact = false,
+  childrenMobileOnly = false,
 }: PageHeaderProps) {
   if (compact) {
     return (
@@ -70,10 +82,17 @@ export function PageHeader({
   // parallel hairline hosil bo'lib, yorliqlar "qayerga ulanishi" noaniq
   // ko'rinardi.
   const hasChildren = React.Children.count(children) > 0;
+  // Yorliqlar telefonga ko'chgan bo'lsa, chiziq `md:` dan boshlab sarlavhaning
+  // o'ziga qaytadi (izoh: `childrenMobileOnly`).
+  const spacing = !hasChildren
+    ? "pb-4 mb-5"
+    : childrenMobileOnly
+      ? "mb-5 md:pb-4 md:border-b md:border-[var(--rule-strong)]"
+      : "mb-5";
 
   return (
     <header
-      className={`flex flex-col gap-4 ${hasChildren ? "mb-5" : "pb-4 mb-5"} ${className}`}
+      className={`flex flex-col gap-4 ${spacing} ${className}`}
       style={hasChildren ? undefined : { borderBottom: "1px solid var(--rule-strong)" }}
     >
       <div className="flex flex-wrap items-start justify-between gap-4">

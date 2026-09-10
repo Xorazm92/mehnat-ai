@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 /**
  * YORLIQ HOLATI URL'DA.
@@ -44,15 +45,35 @@ export function useTabParam<T extends string>(
   // kalitidan foydalanamiz.
   const validKey = valid.join("|");
 
-  useEffect(() => {
-    const allowed = new Set(validKey.split("|"));
-    const sync = () => {
-      const p = new URLSearchParams(window.location.search).get(key);
-      if (p && allowed.has(p)) setValue(p as T);
-    };
-    window.addEventListener("popstate", sync);
-    return () => window.removeEventListener("popstate", sync);
-  }, [key, validKey]);
+  /**
+   * URL'dagi yorliq — `useSearchParams` orqali, ya'ni REAKTIV.
+   *
+   * Ilgari bu yerda faqat `popstate` tinglovchisi turardi va u FAQAT brauzer
+   * "orqaga/oldinga" tugmasida ishlardi. Natijada TASHQARIDAN kelgan yorliq
+   * havolasi ishlamasdi: yon paneldagi yoki qidiruvdagi
+   * `/kassa/chiqim?tab=xarajat` bosilganda Next yumshoq navigatsiya qiladi
+   * (bir xil marshrut, boshqa `?tab=`) — `popstate` CHIQMAYDI, komponent esa
+   * qayta MOUNT bo'lmaydi, ya'ni `useState(initial)` eski qiymatda qolardi.
+   * URL o'zgarardi-yu, ekrandagi yorliq o'zgarmasdi.
+   *
+   * `useSearchParams` native History API bilan ham integratsiyalashgan
+   * (`set()` ichidagi `replaceState`), shuning uchun u ikkala yo'nalishni ham
+   * qamrab oladi va alohida `popstate` tinglovchisi kerak emas.
+   *
+   * Sinxronlash RENDER paytida, effektda EMAS (`components/ui/MoneyField.tsx`
+   * dagi bilan bir xil naqsh): effekt bilan brauzer avval ESKI yorliqni
+   * chizar, keyin yangisiga sakrardi.
+   */
+  const searchParams = useSearchParams();
+  const fromUrl = searchParams.get(key);
+
+  const [lastUrl, setLastUrl] = useState(fromUrl);
+  if (fromUrl !== lastUrl) {
+    setLastUrl(fromUrl);
+    // Ro'yxatda yo'q qiymat (masalan ruxsati yetmaydigan yorliq) e'tiborsiz
+    // qoldiriladi — joriy yorliq o'z holicha turadi.
+    if (fromUrl && validKey.split("|").includes(fromUrl)) setValue(fromUrl as T);
+  }
 
   const set = useCallback(
     (next: T) => {

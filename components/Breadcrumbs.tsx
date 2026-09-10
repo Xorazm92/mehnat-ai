@@ -77,7 +77,13 @@ export function Breadcrumbs({
   const segments = pathname.split("/").filter(Boolean);
 
   // Bitta segment — bu allaqachon ildiz sahifa, breadcrumb ortiqcha shovqin.
-  if (segments.length <= 1) return null;
+  //
+  // ISTISNO: sahifa o'z quyrug'ini bildirgan bo'lsa (`<BreadcrumbTrail>`).
+  // `/payroll` kabi bir bo'lakli manzilda ham endi ichki bo'lim bor
+  // ("Oylik → Oylik hisoblash") va yon paneldagi yorliq bosilganda sarlavha
+  // "Oylik hisoblash" ga o'zgaradi — bunday paytda yo'l chizig'isiz
+  // foydalanuvchi qaysi bo'limning ichida ekanini bilmay qolardi.
+  if (segments.length <= 1 && !trail) return null;
 
   /**
    * OCHIB BO'LMAYDIGAN BO'LAK HAVOLA BO'LMAYDI.

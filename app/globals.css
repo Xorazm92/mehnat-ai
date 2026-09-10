@@ -995,6 +995,31 @@ button.metric-rail-cell:hover {
   content: none;
 }
 
+/* UCHINCHI DARAJA — faol bo'limning sahifa ICHIDAGI yorlig'i (masalan
+   Chiqim kassa > Xo'jalik xarajati). Bir daraja chuqurroq surilgan va
+   maydaroq shrift: u "hozir shu bo'lim ichidasiz" degan kontekst, mustaqil
+   bo'lim emas. Faqat ota bo'lim ochiq bo'lganda chiziladi, shuning uchun
+   yon panel uzayib ketmaydi. */
+.sidebar-nav-item--grandchild {
+  margin-left: 1.55rem;
+  padding-left: 0.9rem;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+  font-size: var(--text-meta, 0.8125rem);
+  font-weight: 500;
+  color: var(--sidebar-item-text);
+  border-left: 1px solid var(--rule);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.sidebar-nav-item--grandchild.active {
+  border-left-color: var(--brand);
+  font-weight: 600;
+}
+.sidebar-nav-item--grandchild.active::before {
+  content: none;
+}
+
 /* Tugmalar */
 .btn-primary {
   display: inline-flex;

@@ -158,10 +158,76 @@ export interface NavSection {
   view: AppView;
   /** Qaysi ekran ichida — natijada "Hisobotlar · Amallar matritsasi" deb chiqadi. */
   parentLabel: string;
+  /**
+   * Ota bo'limning `href` i (`NAV_ITEMS[].href`) — YON PANEL uchun join
+   * kaliti. `parentLabel` bu ishga yaramaydi: u ko'rinish matni va har doim
+   * `NAV_ITEMS` yorlig'iga mos kelmaydi ("Sverka" ≠ "Kassa–bank sverka").
+   *
+   * Berilgan bo'lsa, foydalanuvchi o'sha ota bo'lim sahifasida turganda bu
+   * yorliq yon panelda uchinchi daraja bo'lib chiziladi. Berilmasa — yozuv
+   * faqat global qidiruvda qoladi (hozirgi holat).
+   */
+  parentHref?: string;
   label: string;
   icon: LucideIcon;
+  /**
+   * Bir qatorli tavsif — bo'lim NIMA qilishini aytadi.
+   *
+   * Uch joyda ishlatiladi va shuning uchun shu yerda turadi: sahifa
+   * sarlavhasining ostki qatori (`PageHeader description`), yorliq qatorining
+   * tooltip'i (`TabItem.hint`) va telefondagi yorliq izohi. Ilgari bu matn
+   * faqat sahifaning `<Tabs>` ro'yxatida yashardi — yon panel va sarlavha uni
+   * ko'ra olmasdi, natijada bir xil bo'lim uchun ikki xil ta'rif paydo
+   * bo'lardi.
+   */
+  description?: string;
   keywords?: string;
   roles?: readonly string[];
+}
+
+/**
+ * Bitta sahifaning yon panelga chiqadigan bo'limlari — reyestrdagi TARTIBDA.
+ *
+ * Tartib muhim: birinchi element sahifaning DEFAULT yorlig'i
+ * (`lib/navigation.spec.ts` buni `*_TAB_IDS` bilan solishtirib qo'riqlaydi),
+ * ya'ni `?tab=` bo'lmaganda o'sha faol deb belgilanadi.
+ */
+export function sectionsOf(parentHref: string): NavSection[] {
+  return NAV_SECTIONS.filter((s) => s.parentHref === parentHref);
+}
+
+/** `?tab=` qiymati bo'yicha bitta bo'lim — sarlavha va tavsif shundan olinadi. */
+export function sectionMeta(parentHref: string, tab: string): NavSection | undefined {
+  return NAV_SECTIONS.find(
+    (s) =>
+      s.parentHref === parentHref &&
+      new URLSearchParams(s.href.split("?")[1] ?? "").get("tab") === tab
+  );
+}
+
+/**
+ * Yo'l chizig'ining quyrug'i — sahifa `<BreadcrumbTrail>` ga uzatadi.
+ *
+ * Sahifa sarlavhasi endi JORIY BO'LIM nomini ko'rsatadi ("Xarajat"), ya'ni
+ * ota bo'lim ("Chiqim kassa") faqat shu yerda qoladi — busiz foydalanuvchi
+ * qaysi ekranning ichida ekanini yo'qotardi.
+ */
+export function sectionCrumbs(
+  parentHref: string,
+  tab: string
+): { href?: string; label: string }[] {
+  const out: { href?: string; label: string }[] = [];
+  // `Breadcrumbs` birinchi bo'lakni MANZILDAN o'zi quradi, quyruq esa undan
+  // keyin ulanadi. `/payroll` bir bo'lakli — "Oylik" allaqachon o'sha
+  // birinchi bo'lak, shuning uchun uni takrorlamaymiz; `/kassa/chiqim` da esa
+  // birinchi bo'lak "Kassa", ya'ni "Chiqim kassa" quyruqqa kerak.
+  if (parentHref.split("/").filter(Boolean).length > 1) {
+    const parent = NAV_ITEMS.find((n) => n.href === parentHref);
+    if (parent) out.push({ href: parent.href, label: parent.label });
+  }
+  const sec = sectionMeta(parentHref, tab);
+  if (sec) out.push({ label: sec.label });
+  return out;
 }
 
 export const NAV_SECTIONS: NavSection[] = [
@@ -180,24 +246,34 @@ export const NAV_SECTIONS: NavSection[] = [
   // (`readTabParam`), ya'ni havola qilinadigan holat — lekin global
   // qidiruvda topilmasdi: "bog'lash kerak" yoki "undirish" deb qidirgan
   // foydalanuvchi avval bo'limni, keyin yorliqni qo'lda topishi kerak edi.
-  { href: "/kassa/kirim?tab=reyestr",       view: "kassa_income",  parentLabel: "Kirim kassa",  label: "Barcha tushum",     icon: Banknote,   keywords: "reyestr tushum kirim ro'yxat bank plastik naqd" },
-  { href: "/kassa/kirim?tab=hisoblar",      view: "kassa_income",  parentLabel: "Kirim kassa",  label: "Firma hisoblari",   icon: Landmark,   keywords: "hisob schyot bank o'z firma vipiska" },
-  { href: "/kassa/kirim?tab=navbat",        view: "kassa_income",  parentLabel: "Kirim kassa",  label: "Bog'lash kerak",    icon: Link2,      keywords: "moslashtirilmagan bog'lanmagan navbat nomsiz tushum" },
+  { href: "/kassa/kirim?tab=reyestr",       view: "kassa_income",   parentHref: "/kassa/kirim",       parentLabel: "Kirim kassa",  label: "Barcha tushum",       icon: Banknote, description: "Bank, plastik va naqd — bitta ro'yxatda",     keywords: "reyestr tushum kirim ro'yxat bank plastik naqd" },
+  { href: "/kassa/kirim?tab=hisoblar",      view: "kassa_income",   parentHref: "/kassa/kirim",       parentLabel: "Kirim kassa",  label: "Firma hisoblari",     icon: Landmark, description: "O'z firmalarimiz bo'yicha bank kirimi",     keywords: "hisob schyot bank o'z firma vipiska" },
+  { href: "/kassa/kirim?tab=navbat",        view: "kassa_income",   parentHref: "/kassa/kirim",       parentLabel: "Kirim kassa",  label: "Bog'lash kerak",      icon: Link2, description: "Qaysi firmadan ekani hali aniqlanmagan kirimlar",        keywords: "moslashtirilmagan bog'lanmagan navbat nomsiz tushum" },
 
-  { href: "/kassa/chiqim?tab=navbat",       view: "kassa_expense", parentLabel: "Chiqim kassa", label: "Yopish kerak",      icon: ListChecks, keywords: "navbat toifalash vipiska chiqim yopish" },
-  { href: "/kassa/chiqim?tab=kartalar",     view: "kassa_expense", parentLabel: "Chiqim kassa", label: "Xodim kartalari",   icon: CreditCard, keywords: "tranzit karta kanal qoldiq xodim" },
-  { href: "/kassa/chiqim?tab=xojalik",      view: "kassa_expense", parentLabel: "Chiqim kassa", label: "Xo'jalik xarajati", icon: Receipt,    keywords: "ovqat taksi non kundalik xo'jalik" },
+  { href: "/kassa/chiqim?tab=navbat",       view: "kassa_expense",  parentHref: "/kassa/chiqim",      parentLabel: "Chiqim kassa", label: "Yopish kerak",        icon: ListChecks, description: "Vipiskadan kelgan chiqimni toifalab yopish",   keywords: "navbat toifalash vipiska chiqim yopish" },
+  { href: "/kassa/chiqim?tab=kartalar",     view: "kassa_expense",  parentHref: "/kassa/chiqim",      parentLabel: "Chiqim kassa", label: "Xodim kartalari",     icon: CreditCard, description: "Kartalar qoldig'i va bog'lanmagan o'tkazmalar",   keywords: "tranzit karta kanal qoldiq xodim" },
+  { href: "/kassa/chiqim?tab=xojalik",      view: "kassa_expense",  parentHref: "/kassa/chiqim",      parentLabel: "Chiqim kassa", label: "Xo'jalik xarajati",   icon: Receipt, description: "Ovqat, taksi, non — kunlik xarajatlar",      keywords: "ovqat taksi non kundalik xo'jalik" },
+  // `xarajat` va `oylik` — sahifada BOR, lekin reyestrda yo'q edi: yon panel
+  // besh yorliqning uchtasini ko'rsatib turardi. `view` lari ataylab
+  // otasinikidan (`kassa_expense`) FARQ qiladi va sahifadagi darvoza bilan
+  // aynan bir xil (`ChiqimKassaClient` → `allowedTabs`): "Xarajat" `expenses`
+  // ni, "Oylik" esa `payroll` ni talab qiladi.
+  { href: "/kassa/chiqim?tab=xarajat",      view: "expenses",       parentHref: "/kassa/chiqim",      parentLabel: "Chiqim kassa", label: "Xarajat",             icon: Receipt, description: "Kassa xarajatlari ro'yxati va tasdiq oqimi",      keywords: "xarajat rasxod tasdiq kassa yozuvi ro'yxat" },
+  { href: "/kassa/chiqim?tab=oylik",        view: "payroll",        parentHref: "/kassa/chiqim",      parentLabel: "Chiqim kassa", label: "Oylik",               icon: Wallet, description: "Qaysi manbadan qaysi xodimga berildi",       keywords: "oylik avans payout reyestr manba xodim berilgan" },
 
-  { href: "/kassa/qarzdorlik?tab=undirish", view: "kassa_debt",    parentLabel: "Qarzdorlik",   label: "Undirish",          icon: HandCoins,  keywords: "undirish qarzdor gaplashish navbat qo'ng'iroq" },
-  { href: "/kassa/qarzdorlik?tab=holat",    view: "kassa_debt",    parentLabel: "Qarzdorlik",   label: "Hisob-kitob",       icon: Scale,      keywords: "hisob kitob varaqa 1c kesim qarz avans" },
-  { href: "/kassa/qarzdorlik?tab=tolovlar", view: "kassa_debt",    parentLabel: "Qarzdorlik",   label: "To'lovlar",         icon: Wallet,     keywords: "to'lov oylik firma payment" },
-  { href: "/kassa/qarzdorlik?tab=tekshiruv",view: "kassa_debt",    parentLabel: "Qarzdorlik",   label: "Tekshiruv",         icon: ShieldCheck,keywords: "sverka import nomuvofiqlik 1c solishtirish reja fakt" },
+  { href: "/kassa/qarzdorlik?tab=undirish", view: "kassa_debt",     parentHref: "/kassa/qarzdorlik",  parentLabel: "Qarzdorlik",   label: "Undirish",            icon: HandCoins, description: "Bugun kim bilan gaplashish kerak",    keywords: "undirish qarzdor gaplashish navbat qo'ng'iroq" },
+  { href: "/kassa/qarzdorlik?tab=holat",    view: "kassa_debt",     parentHref: "/kassa/qarzdorlik",  parentLabel: "Qarzdorlik",   label: "Hisob-kitob",         icon: Scale, description: "1C kesimi bilan yonma-yon solishtirish",        keywords: "hisob kitob varaqa 1c kesim qarz avans" },
+  { href: "/kassa/qarzdorlik?tab=tolovlar", view: "kassa_debt",     parentHref: "/kassa/qarzdorlik",  parentLabel: "Qarzdorlik",   label: "To'lovlar",           icon: Wallet, description: "Firmalar bo'yicha oylik to'lovlar",       keywords: "to'lov oylik firma payment" },
+  { href: "/kassa/qarzdorlik?tab=tekshiruv", view: "kassa_debt",     parentHref: "/kassa/qarzdorlik",  parentLabel: "Qarzdorlik",   label: "Tekshiruv",           icon: ShieldCheck, description: "Import nomuvofiqliklari va 1C solishtiruvi",  keywords: "sverka import nomuvofiqlik 1c solishtirish reja fakt" },
 
-  { href: "/kassa/sverka?tab=terminals",    view: "kassa_sverka",  parentLabel: "Sverka",       label: "Terminallar",       icon: CreditCard, keywords: "terminal doira ekvayring uzcard humo" },
-  { href: "/kassa/sverka?tab=devices",      view: "kassa_sverka",  parentLabel: "Sverka",       label: "Kassa apparatlari", icon: Receipt,    keywords: "apparat fiskal fm raqam kunlik hisobot" },
+  // Tartib SVERKA_TAB_IDS bilan bir xil: birinchi element sahifaning DEFAULT
+  // yorlig'i va yon panel `?tab=` bo'lmaganda aynan shuni faol deb belgilaydi.
+  { href: "/kassa/sverka?tab=sverka",       view: "kassa_sverka",   parentHref: "/kassa/sverka",      parentLabel: "Sverka",       label: "Sverka jadvali",      icon: Scale, description: "Kassa va bank bo'yicha davrlar solishtiruvi",        keywords: "sverka jadval solishtirish kassa bank farq komissiya" },
+  { href: "/kassa/sverka?tab=terminals",    view: "kassa_sverka",   parentHref: "/kassa/sverka",      parentLabel: "Sverka",       label: "Terminallar",         icon: CreditCard, description: "Qaysi kanal solishtiruvga kiradi",   keywords: "terminal doira ekvayring uzcard humo" },
+  { href: "/kassa/sverka?tab=devices",      view: "kassa_sverka",   parentHref: "/kassa/sverka",      parentLabel: "Sverka",       label: "Kassa apparatlari",   icon: Receipt, description: "Fiskal apparatlar va ularning kunlik hisoboti",      keywords: "apparat fiskal fm raqam kunlik hisobot" },
 
-  { href: "/payroll?tab=drafts",     view: "payroll",   parentLabel: "Oylik",      label: "Oylik hisoblash",      icon: Calculator,   keywords: "qoralama hisoblash maosh draft" },
-  { href: "/payroll?tab=history",    view: "payroll",   parentLabel: "Oylik",      label: "To'lovlar tarixi",     icon: History,      keywords: "tarix to'lov to'langan" },
+  { href: "/payroll?tab=drafts",            view: "payroll",        parentHref: "/payroll",           parentLabel: "Oylik",        label: "Oylik hisoblash",     icon: Calculator, description: "Joriy oy qoralamalari va tasdiqlash",   keywords: "qoralama hisoblash maosh draft" },
+  { href: "/payroll?tab=history",           view: "payroll",        parentHref: "/payroll",           parentLabel: "Oylik",        label: "To'lovlar tarixi",    icon: History, description: "Tasdiqlangan va to'langan oyliklar",      keywords: "tarix to'lov to'langan" },
 
   { href: "/deadlines?tab=overdue",  view: "deadlines", parentLabel: "Ishlar",     label: "Muddati o'tgan",       icon: AlarmClock,   keywords: "kechikkan muddat overdue prosrochka" },
   { href: "/deadlines?tab=mine",     view: "deadlines", parentLabel: "Ishlar",     label: "Mening ishlarim",      icon: UserCircle,   keywords: "mening menga biriktirilgan" },

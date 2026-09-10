@@ -9,7 +9,12 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { useTabParam } from "@/hooks/useTabParam";
 import { PAYROLL_TAB_IDS, type PayrollTabId } from "@/lib/payrollTabs";
+import { BreadcrumbTrail } from "@/components/BreadcrumbTrail";
+import { sectionCrumbs, sectionMeta } from "@/lib/navigation";
 import { CreditCard, Calculator, History } from "lucide-react";
+
+/** Yon paneldagi ota bo'lim — sarlavha va yo'l chizig'i shundan olinadi. */
+const SECTION_ROOT = "/payroll";
 
 interface Props {
   companies: Company[];
@@ -40,15 +45,36 @@ export default function PayrollClient({ companies, staff, operations, userRole, 
     { id: "history" as const, label: "To'lovlar tarixi", icon: History, hint: "Tasdiqlangan va to'langan oyliklar" },
   ];
 
+  // Sarlavha JORIY BO'LIMNI ko'rsatadi — yon paneldagi band bilan bir xil
+  // matn. Reyestr topilmasa ekran nomiga qaytadi (himoya, kutilmaydi).
+  const meta = sectionMeta(SECTION_ROOT, tab);
+  const SectionIcon = meta?.icon ?? CreditCard;
+
   return (
     <div className="flex flex-col h-full min-h-0">
+      <BreadcrumbTrail crumbs={sectionCrumbs(SECTION_ROOT, tab)} />
       <PageHeader
-        icon={<CreditCard size={20} />}
-        title="Oylik"
-        description="Maosh hisoblash, qoralamalar va to'lovlar"
+        icon={<SectionIcon size={20} />}
+        title={meta?.label ?? "Oylik"}
+        description={meta?.description ?? "Maosh hisoblash, qoralamalar va to'lovlar"}
         className="flex-shrink-0"
+        childrenMobileOnly
       >
-        <Tabs items={tabs} value={tab} onChange={setTab} idBase="payroll" ariaLabel="Oylik bo'limlari" />
+        {/*
+          YORLIQ QATORI — FAQAT TELEFONDA.
+          Kompyuterda bu ro'yxat yon panelda uchinchi daraja bo'lib turibdi
+          (`NAV_SECTIONS`), ya'ni bir xil tanlov ekranda ikki marta edi.
+          Telefonda esa yon panel gamburger ortida yashirin, shuning uchun bu
+          qator bo'lim almashtirishning yagona qulay yo'li bo'lib qoladi.
+        */}
+        <Tabs
+          items={tabs}
+          value={tab}
+          onChange={setTab}
+          idBase="payroll"
+          ariaLabel="Oylik bo'limlari"
+          className="md:hidden"
+        />
       </PageHeader>
 
       <TabPanel tabId={tab} idBase="payroll" className="flex-1 min-h-0 overflow-y-auto">

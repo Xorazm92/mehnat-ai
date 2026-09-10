@@ -37,6 +37,8 @@ import { Select } from "@/components/ui/Select";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { useTabParam } from "@/hooks/useTabParam";
 import { KIRIM_TAB_IDS, type KirimTab } from "@/lib/kirimTabs";
+import { BreadcrumbTrail } from "@/components/BreadcrumbTrail";
+import { sectionCrumbs, sectionMeta } from "@/lib/navigation";
 
 interface AccountRow {
   id: string;
@@ -152,6 +154,9 @@ export default function KirimKassaClient({ accounts, unmatched, companies, kpi, 
   // xodimi kechqurun navbatni ochib, sahifani yangilasa reyestrga
   // qaytib tushardi.
   const [tab, setTab] = useTabParam<KirimTab>("tab", KIRIM_TAB_IDS, initialTab);
+  // Sarlavha/ikonka joriy bo'limdan — yon panel bilan bir manba.
+  const meta = sectionMeta("/kassa/kirim", tab);
+  const SectionIcon = meta?.icon ?? Banknote;
   useAutoRefresh();
 
   // `IncomeRegister` o'z ma'lumotini MUSTAQIL o'qiydi (server action, props
@@ -444,10 +449,11 @@ export default function KirimKassaClient({ accounts, unmatched, companies, kpi, 
 
   return (
     <div className="p-4 md:p-6 space-y-5">
+      <BreadcrumbTrail crumbs={sectionCrumbs("/kassa/kirim", tab)} />
       <PageHeader
-        title="Kirim kassa"
-        description="Bank vipiskasi, plastik karta va naqd pul kirimlari"
-        icon={<Banknote size={20} />}
+        title={meta?.label ?? "Kirim kassa"}
+        description={meta?.description ?? "Bank vipiskasi, plastik karta va naqd pul kirimlari"}
+        icon={<SectionIcon size={20} />}
         actions={
           <div className="flex items-center gap-2 flex-wrap">
           {/*
@@ -570,6 +576,10 @@ export default function KirimKassaClient({ accounts, unmatched, companies, kpi, 
         value={tab}
         onChange={setTab}
         ariaLabel="Kirim kassa bo'limlari"
+        // FAQAT TELEFONDA: kompyuterda bu ro'yxat yon panelda uchinchi daraja
+        // bo'lib turibdi (`NAV_SECTIONS`) — bir xil tanlov ekranda ikki marta
+        // ko'rinardi. Telefonda yon panel gamburger ortida yashirin.
+        className="md:hidden"
       />
 
       {/*
