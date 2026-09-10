@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...lekin shablon fayl repoda TURISHI KERAK — unda hech qanday real sir yo'q,
+# faqat o'zgaruvchilar ro'yxati va ularni to'ldirish bo'yicha izoh.
+!.env.example
 
 # vercel
 .vercel
@@ -89,7 +92,19 @@ storage/
 # ishlayveradi; git ularni kuzatmaydi. Qaysi skill o'rnatilgani
 # `skills-lock.json` da qayd etiladi, ya'ni kerak bo'lsa qayta tiklanadi.
 /.agents/skills/
+# Xuddi shu sabab bilan Claude Code skilllari ham kuzatilmaydi — ular lokal
+# asboblar, ilova kodi emas. Hooks va settings.json esa repoda qoladi.
+/.claude/skills/
 
 # Migratsiya rollback yozuvlari — prod qator IDlari; zaxira bilan birga saqlanadi,
 # git ga tushmaydi (docs/plan/service-key-migration-runbook.md ga qarang).
 .migrations/
+
+# Ish manbalari ombori — HAQIQIY MA'LUMOT, repozitoriyga chiqmaydi.
+# Ichida: firmalar reyestri (nom, STIR, xizmat haqi, xodim ulushlari),
+# kpi-oylik.json, eski Supabase davridan qolgan skriptlar (ularda ochiq
+# service_role kalitlari va parollar bor) va "Finansistlar uchun tizim dizayni"
+# HTML maketlari. Diskda qoladi — import skriptlari uni o'qiydi:
+#   npx tsx scripts/import-yorqinoy-firmalar.ts
+#   npx tsx scripts/seed-kpi-monthly.ts
+/data/
