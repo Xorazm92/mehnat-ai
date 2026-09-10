@@ -346,6 +346,161 @@ export async function createPayout(data: {
   return serialize(payout);
 }
 
+/**
+ * AVANS — kassadan BIR QADAMDA berish.
+ *
+ * NEGA ALOHIDA YO'L. `createPayout` tasdiqlangan majburiyatdan oshib keta
+ * olmaydi va majburiyat yo'q bo'lsa umuman yozmaydi ("avval oylik
+ * tasdiqlansin"). Avans esa aynan SHU holat: oy hali yopilmagan, majburiyat
+ * hisoblanmagan, lekin pul allaqachon berilyapti. Ilgari buni faqat
+ * `/payroll` da ikki qadamda qilish mumkin edi (tuzatma yozish → admin
+ * tasdig'i), kassa/xarajat ekranida esa umuman iloji yo'q edi.
+ *
+ * NIMA YOZILADI (bitta Serializable tranzaksiyada):
+ *   1) `PayrollAdjustment` — turi `avans`, DARHOL tasdiqlangan;
+ *   2) `Payout` — shu tuzatmaga bog'langan real pul chiqimi (manba + xodim);
+ *   3) double-entry: SALARY_EXPENSE (xodim) / CASH (kanal).
+ * Ya'ni natija `approvePayrollAdjustment` dagi avans shoxi bilan bir xil —
+ * faqat ikki qadam bitta amalga siqilgan.
+ *
+ * MAJBURIYATNI OSHIRMAYDI. `avans` ning majburiyatdagi og'irligi 0
+ * (`lib/payrollObligation.ts`), shuning uchun bu yerda tuzatmani darhol
+ * tasdiqlash "qancha to'lash kerak"ni ko'tara olmaydi — u faqat "qancha
+ * berildi" tomonini oshiradi, ya'ni keyingi oylik to'lovining qoldig'ini
+ * KAMAYTIRADI. Shu sabab darvoza `canDisburse` (pul berish huquqi),
+ * `isSeniorRole` emas.
+ */
+export async function createAvansPayout(data: {
+  employeeId: string;
+  /** Qaysi oy hisobiga — "YYYY-MM" yoki "YYYY-MM-DD". */
+  month: string;
+  amount: number;
+  /** Pul QAYSI kassadan chiqadi — majburiy (`DisbursementChannel.id`). */
+  channelId: string;
+  note?: string;
+}) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  const role = session.user.role as string;
+  if (!canDisburse(role)) throw new Error("Pul berishga ruxsat yo'q");
+
+  if (!/^\d{4}-\d{2}(-\d{2})?$/.test(data.month)) {
+    throw new Error("Oy formati noto'g'ri (YYYY-MM kutiladi)");
+  }
+  const month = data.month.slice(0, 7);
+  const amount = Number(data.amount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error("Avans summasi musbat son bo'lishi kerak");
+  }
+
+  const channelId = data.channelId?.trim();
+  if (!channelId) {
+    throw new Error("Pul manbaini tanlang — avans qaysi kassadan berilmoqda");
+  }
+  await assertFundingSource(channelId);
+  const channel = await prisma.disbursementChannel.findUnique({
+    where: { id: channelId },
+    select: { type: true, label: true },
+  });
+  const channelKind = channel ? normalizeChannelType(channel.type) : null;
+  const paymentMethod = channelKind ? PAYOUT_METHOD_BY_CHANNEL[channelKind] : "naqd";
+
+  await assertPeriodOpen(prisma, month, "avans");
+
+  const employee = await prisma.user.findUnique({
+    where: { id: data.employeeId },
+    select: { id: true, fullName: true },
+  });
+  if (!employee) throw new Error("Xodim topilmadi");
+
+  const userId = session.user.id as string;
+  const reason = data.note?.trim() || `Avans (${month})`;
+
+  const payout = await serializable(async (tx) => {
+    await assertSufficientFunds({ amount, role, userId, context: "payroll", db: tx });
+
+    // ORTIQCHA TO'LOV QO'RIQCHISI. Majburiyat hali yo'q bo'lsa (odatiy avans
+    // holati) chegara ham yo'q. Lekin oy allaqachon tasdiqlangan bo'lsa,
+    // "avans" amalda oddiy qisman to'lovga aylanadi va `createPayout` bilan
+    // BIR XIL chegaraga bo'ysunadi — aks holda shu tugma orqali majburiyatdan
+    // oshirib to'lash yo'li ochilib qolardi.
+    const { obligation, paid } = await obligationAndPaid(tx, data.employeeId, month);
+    if (obligation > 0) {
+      const remaining = computeRemaining(obligation, paid);
+      if (amount > remaining) {
+        throw new Error(
+          `${month} oyining oyligi allaqachon tasdiqlangan: qolgan ` +
+            `${Math.round(remaining).toLocaleString("ru-RU")} so'm, so'ralgan ` +
+            `${Math.round(amount).toLocaleString("ru-RU")} so'm`
+        );
+      }
+    }
+
+    // Summa MUSBAT yoziladi. O'quvchilar ishorani emas, TURni o'qiydi
+    // (`lib/adjustments.ts` / `lib/payrollObligation.ts`), lekin yangi
+    // yozuvlarda yo'nalish bitta bo'lgani ma'qul.
+    const adjustment = await tx.payrollAdjustment.create({
+      data: {
+        month,
+        employeeId: data.employeeId,
+        adjustmentType: "avans",
+        amount: new Prisma.Decimal(amount),
+        reason,
+        isApproved: true,
+        approvedBy: userId,
+        approvedAt: new Date(),
+        createdBy: userId,
+      },
+    });
+
+    const created = await tx.payout.create({
+      data: {
+        employeeId: data.employeeId,
+        adjustmentId: adjustment.id,
+        month,
+        amount: new Prisma.Decimal(amount),
+        paymentMethod,
+        channelId,
+        note: reason,
+        createdBy: userId,
+      },
+    });
+
+    await postLedger(tx, {
+      legs: [
+        { accountId: ACCOUNTS.SALARY_EXPENSE, debit: amount, subjectId: data.employeeId },
+        { accountId: ACCOUNTS.CASH, credit: amount, channelId },
+      ],
+      period: month,
+      sourceTable: "Payout",
+      sourceId: created.id,
+      createdBy: userId,
+      description: `Avans: ${employee.fullName} (${month})` + (channel ? ` — ${channel.label}` : ""),
+    });
+
+    return created;
+  });
+
+  await recordAuditLog({
+    userId,
+    action: "create",
+    tableName: "Payout",
+    recordId: payout.id,
+    newData: {
+      kind: "avans",
+      employeeId: data.employeeId,
+      month,
+      amount,
+      paymentMethod,
+      channelId,
+      note: reason,
+    },
+  });
+
+  return serialize(payout);
+}
+
 export async function softDeletePayout(id: string, reason: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");

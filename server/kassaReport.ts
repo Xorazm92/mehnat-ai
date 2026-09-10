@@ -268,11 +268,13 @@ export async function getCategoryBreakdown(period?: string): Promise<CategoryBre
   const payoutAmount = Number(payouts._sum.amount ?? 0);
   const expense = pick("expense");
   if (payoutAmount > 0) {
-    // Nomi ataylab "Oylik (xodimlarga)": kassa toifalari ro'yxatida bunday
-    // yozuv yo'q, ya'ni uni `KassaEntry` moddasi bilan chalkashtirib
-    // bo'lmaydi. Kesim `/kassa/chiqim → Oylik` tabida (xodim va manba bo'yicha).
+    // Nomi ataylab "Oylik va avans (xodimlarga)": kassa toifalari ro'yxatida
+    // bunday yozuv yo'q, ya'ni uni `KassaEntry` moddasi bilan chalkashtirib
+    // bo'lmaydi. AVANS ham shu yig'indida — u ham `Payout` (kassadan chiqqan
+    // pul), faqat majburiyat tasdig'idan oldin berilgan. Kesim
+    // `/kassa/chiqim → Oylik` tabida (xodim, manba va tur bo'yicha).
     expense.push({
-      category: "Oylik (xodimlarga)",
+      category: "Oylik va avans (xodimlarga)",
       type: "expense",
       count: payouts._count,
       amount: payoutAmount,

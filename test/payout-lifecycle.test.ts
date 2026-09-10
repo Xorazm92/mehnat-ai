@@ -17,7 +17,8 @@ vi.mock("server-only", () => ({}));
 const { prisma } = await import("@/lib/prisma");
 const { approveEmployeeSalary, createPayrollAdjustment, approvePayrollAdjustment } =
   await import("@/server/payroll");
-const { createPayout, softDeletePayout, getPayouts } = await import("@/server/payouts");
+const { createPayout, createAvansPayout, softDeletePayout, getPayouts } =
+  await import("@/server/payouts");
 
 const TAG = `vitest-payout-${Date.now()}`;
 const MONTH = "2099-05-01"; // boshqa test fayllari bilan to'qnashmaydigan davr
@@ -300,5 +301,79 @@ describe("qo'lda bonus va jarima majburiyatni o'zgartiradi", () => {
     await expect(
       createPayout({ employeeId: ids.employee, month: KEY, amount: 1, channelId: ids.channel })
     ).rejects.toThrow(/Ortiqcha to'lov bloklandi/);
+  });
+});
+
+// =====================================================
+// KASSADAN BIR QADAMDA AVANS (`createAvansPayout`)
+// =====================================================
+// Xarajat formasidagi "Avans" toifasi shu yo'ldan yuradi. Farqi:
+// `createPayout` majburiyat tasdiqlanmagan oyga UMUMAN yozmaydi, avans esa
+// aynan shu holat uchun — pul oldin beriladi, oy keyin hisoblanadi.
+describe("kassadan bir qadamda avans", () => {
+  const MONTH_FULL = "2099-10-01";
+  const KEY = "2099-10";
+
+  it("majburiyat tasdiqlanmagan oyga ham avans yozadi", async () => {
+    // Oddiy to'lov shu oyga o'tmaydi — chegara shu.
+    await expect(
+      createPayout({ employeeId: ids.employee, month: KEY, amount: 100_000, channelId: ids.channel })
+    ).rejects.toThrow(/majburiyati yo'q/);
+
+    const payout = await createAvansPayout({
+      employeeId: ids.employee,
+      month: KEY,
+      amount: 600_000,
+      channelId: ids.channel,
+      note: "vitest kassa avansi",
+    });
+    expect(Number(payout.amount)).toBe(600_000);
+    expect(payout.channelId).toBe(ids.channel);
+
+    // Tuzatma darhol tasdiqlangan va to'lovga bog'langan.
+    const adj = await prisma.payrollAdjustment.findFirst({
+      where: { employeeId: ids.employee, month: KEY, adjustmentType: "avans", deletedAt: null },
+    });
+    expect(adj).not.toBeNull();
+    expect(adj!.isApproved).toBe(true);
+    expect(payout.adjustmentId).toBe(adj!.id);
+
+    // Jurnal: "qaysi manbadan qaysi xodimga".
+    const legs = await prisma.ledgerEntry.findMany({
+      where: { sourceTable: "Payout", sourceId: payout.id },
+    });
+    expect(legs).toHaveLength(2);
+    expect(legs.find((l) => l.accountId === "CASH")!.channelId).toBe(ids.channel);
+    expect(legs.find((l) => l.accountId === "SALARY_EXPENSE")!.subjectId).toBe(ids.employee);
+  });
+
+  it("manbasiz avans rad etiladi", async () => {
+    await expect(
+      // @ts-expect-error — manbasiz chaqiruv tipda ham taqiqlangan
+      createAvansPayout({ employeeId: ids.employee, month: KEY, amount: 100_000 })
+    ).rejects.toThrow(/manba/i);
+  });
+
+  it("oy hisoblanganda avans qoldiqdan ayiriladi", async () => {
+    // Majburiyat: 10 mln × 20% = 2 000 000; avans 600 000 berilgan.
+    await approveEmployeeSalary({ employeeId: ids.employee, month: MONTH_FULL });
+
+    await expect(
+      createPayout({ employeeId: ids.employee, month: KEY, amount: 1_400_001, channelId: ids.channel })
+    ).rejects.toThrow(/Ortiqcha to'lov bloklandi/);
+
+    await createPayout({ employeeId: ids.employee, month: KEY, amount: 1_400_000, channelId: ids.channel });
+
+    const agg = await prisma.payout.aggregate({
+      where: { employeeId: ids.employee, month: KEY, deletedAt: null },
+      _sum: { amount: true },
+    });
+    expect(Number(agg._sum.amount)).toBe(2_000_000);
+  });
+
+  it("majburiyat to'liq to'langach avans ham o'tmaydi", async () => {
+    await expect(
+      createAvansPayout({ employeeId: ids.employee, month: KEY, amount: 1, channelId: ids.channel })
+    ).rejects.toThrow(/allaqachon tasdiqlangan/);
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -36,7 +36,7 @@ import { Tabs, type TabItem } from "@/components/ui";
 import ExpenseModule from "@/components/ExpenseModule";
 import type { Expense, BalanceBreakdown } from "@/types";
 import { createExpense, updateExpense, deleteExpense, approveExpense, rejectExpense } from "@/server/kassa";
-import { createPayout } from "@/server/payouts";
+import { createAvansPayout, createPayout } from "@/server/payouts";
 import { usePrompt } from "@/components/ui/ConfirmDialog";
 import { DateField } from "@/components/ui/DateField";
 import { useTabParam } from "@/hooks/useTabParam";
@@ -323,6 +323,13 @@ export default function ChiqimKassaClient({
     return canManageChannels;
   });
   const [tab, setTab] = useTabParam<ChiqimTab>("tab", allowedTabs, initialTab);
+
+  // Reyestrdagi AVANS ulushi — "oylik" va "avans" bir jadvalda yotadi
+  // (ikkalasi ham `Payout`), farqi tuzatma turida (`isAvans`).
+  const avansSummary = useMemo(() => {
+    const rows = payouts.rows.filter((p) => p.isAvans);
+    return { count: rows.length, total: rows.reduce((s, p) => s + p.amount, 0) };
+  }, [payouts.rows]);
   // Toifalash navbati: qaysi qator ustida ish ketyapti va xato matni.
 
   // Kassaga hali yozilmaganlar — yozilgani ro'yxatdan chiqadi.
@@ -723,6 +730,21 @@ export default function ChiqimKassaClient({
                       throw e; // modal ochiq qolsin
                     }
                   },
+                  // AVANS — boshqa server yo'li. `createPayout` majburiyat
+                  // tasdiqlanmagan oyga umuman yozmaydi, avans esa aynan
+                  // shu holat uchun: tuzatma + to'lov bitta tranzaksiyada
+                  // (`createAvansPayout`).
+                  onSaveAvans: async (data) => {
+                    try {
+                      await createAvansPayout(data);
+                      toast.success("Avans berildi");
+                      router.refresh();
+                      setTab("oylik");
+                    } catch (e) {
+                      toast.error(friendlyError(e));
+                      throw e;
+                    }
+                  },
                 }
               : undefined
           }
@@ -773,20 +795,24 @@ export default function ChiqimKassaClient({
           Bu bo'lim shu bo'shliqni yopadi va ikki ustunga javob beradi —
           QAYSI MANBADAN (kassa kanali) QAYSI XODIMGA.
 
-          FAQAT KO'RISH. Pul berish `/payroll` da qoladi: u yerda majburiyat
-          hisoblanadi, ortiqcha to'lov bloklanadi va davr qulfi tekshiriladi.
-          Bu yerda ikkinchi yozuv yo'li ochilsa, bitta to'lov ikki jadvalga
-          tushib qolardi. */}
+          FAQAT KO'RISH — bu bo'lim reyestr. Yozuv "Xarajat" yorlig'idagi
+          "Oylik"/"Avans" toifasidan yoki `/payroll` dan ketadi; ikkalasi ham
+          bitta yo'lga (`Payout`) tushadi, ya'ni bitta to'lov ikki jadvalda
+          paydo bo'lmaydi. */}
       {tab === "oylik" && (<>
       <div className="p-4 rounded-xl flex items-center justify-between gap-3 flex-wrap" style={card}>
         <div className="min-w-0">
           <p className="text-body font-semibold" style={{ color: "var(--text)" }}>
-            Berilgan oyliklar — {payouts.rows.length} ta ·{" "}
+            Berilgan oylik va avans — {payouts.rows.length} ta ·{" "}
             <Money value={payouts.total} tone="out" bold />
           </p>
           <p className="text-meta" style={{ color: "var(--text-muted)" }}>
             Kassadan chiqqan real pul. Balansda ham shu summa chiqim sifatida
             turadi — kassa yozuvi (xarajat) sifatida qayta yozilmaydi.
+            {avansSummary.count > 0 && (
+              <> Shundan <b>avans</b>: {avansSummary.count} ta ·{" "}
+                {formatNum(avansSummary.total)} so&apos;m.</>
+            )}
           </p>
         </div>
         <Link href="/payroll">
@@ -817,7 +843,7 @@ export default function ChiqimKassaClient({
         rowKey={(p) => p.id}
         caption="Berilgan oyliklar — manba va xodim kesimida"
         emptyTitle="Oylik berilmagan"
-        emptyDescription="Bu ro'yxatda /payroll orqali berilgan real to'lovlar ko'rinadi."
+        emptyDescription="Bu ro'yxatda berilgan oylik va avans — xodim, manba va tur kesimida ko'rinadi."
         emptyIcon={<Wallet size={28} />}
       />
       </>)}

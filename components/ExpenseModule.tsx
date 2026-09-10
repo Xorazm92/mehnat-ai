@@ -53,6 +53,18 @@ const FALLBACK_CATEGORIES = ["Arenda", "Soliqlar", "Bank usluga", "Ovqatga", "Ko
  */
 const SALARY_CATEGORY = "Oylik";
 
+/**
+ * AVANS — "Oylik" ning juftligi, xuddi shunday MAXSUS band.
+ *
+ * Nega alohida: oylik to'lovi (`createPayout`) tasdiqlangan majburiyatdan
+ * oshib keta olmaydi va majburiyat yo'q bo'lsa umuman yozilmaydi. Avans esa
+ * aynan shu holat — oy hali hisoblanmagan, lekin pul berilyapti. Shuning
+ * uchun u boshqa server yo'lidan ketadi (`createAvansPayout`): avans
+ * tuzatmasi + `Payout` bitta tranzaksiyada. Kassa uchun ikkisi ham bir xil
+ * chiqim, farqi — chegara qoidasi.
+ */
+const AVANS_CATEGORY = "Avans";
+
 /** Oxirgi 12 oy — "qaysi oy uchun" tanlagichi. */
 function recentMonths(count = 12): string[] {
   const out: string[] = [];
@@ -82,6 +94,17 @@ interface ExpenseModuleProps {
     payroll?: {
         employees: { id: string; fullName: string }[];
         onSavePayout: (data: {
+            employeeId: string;
+            month: string;
+            amount: number;
+            channelId: string;
+            note?: string;
+        }) => Promise<void>;
+        /**
+         * AVANS yo'li — majburiyat tasdiqlanishini KUTMAYDI. Berilmasa
+         * toifalar ro'yxatida "Avans" ko'rinmaydi.
+         */
+        onSaveAvans?: (data: {
             employeeId: string;
             month: string;
             amount: number;
@@ -252,7 +275,8 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                 // bo'lsa yoki manba bo'lmasa yozuv rad etiladi.
                 if (!salaryFor.employeeId) throw new Error("Xodimni tanlang");
                 if (!editingExpense.channelId) throw new Error("Pul manbaini tanlang");
-                await payroll!.onSavePayout({
+                const send = isAvans ? payroll!.onSaveAvans! : payroll!.onSavePayout;
+                await send({
                     employeeId: salaryFor.employeeId,
                     month: salaryFor.month,
                     amount: Number(editingExpense.amount || 0),
@@ -282,7 +306,10 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
         // "Oylik" — faqat YANGI yozuvda. Mavjud kassa xarajatini oylikka
         // aylantirib bo'lmaydi: u boshqa jadvalda yashaydi, ya'ni "tahrir"
         // emas, ko'chirish bo'lardi.
-        if (payroll && !editingExpense?.id) base.unshift(SALARY_CATEGORY);
+        if (payroll && !editingExpense?.id) {
+            base.unshift(SALARY_CATEGORY);
+            if (payroll.onSaveAvans) base.splice(1, 0, AVANS_CATEGORY);
+        }
         // Tahrirlanayotgan yozuvning o'z toifasi ham ro'yxatda tursin —
         // aks holda eski/begona toifa select'dan "yo'qolardi".
         const current = editingExpense?.category;
@@ -296,13 +323,23 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
      * standart bo'lib qolsa forma har ochilganda oylik rejimida ochilardi.
      */
     const defaultCategory = useMemo(
-        () => categoryOptions.find((c) => c !== SALARY_CATEGORY) ?? categoryOptions[0] ?? '',
+        () => categoryOptions.find((c) => c !== SALARY_CATEGORY && c !== AVANS_CATEGORY) ?? categoryOptions[0] ?? '',
         [categoryOptions]
     );
 
-    /** Forma hozir oylik rejimidami — bir necha joyda kerak. */
-    const isSalary = Boolean(payroll) && !editingExpense?.id
-        && (editingExpense?.category ?? defaultCategory) === SALARY_CATEGORY;
+    /**
+     * Forma hozir OYLIK rejimidami va qaysi turida — bir necha joyda kerak.
+     * `null` — oddiy kassa xarajati.
+     */
+    const payoutKind: 'oylik' | 'avans' | null = useMemo(() => {
+        if (!payroll || editingExpense?.id) return null;
+        const c = editingExpense?.category ?? defaultCategory;
+        if (c === SALARY_CATEGORY) return 'oylik';
+        if (c === AVANS_CATEGORY && payroll.onSaveAvans) return 'avans';
+        return null;
+    }, [payroll, editingExpense?.id, editingExpense?.category, defaultCategory]);
+    const isSalary = payoutKind !== null;
+    const isAvans = payoutKind === 'avans';
 
     const monthOptions = useMemo(() => recentMonths(), []);
 
@@ -550,7 +587,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                 open={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 size="lg"
-                title={editingExpense?.id ? 'Xarajatni tahrirlash' : isSalary ? "Oylik to'lovi" : 'Xarajatni kiritish'}
+                title={editingExpense?.id ? 'Xarajatni tahrirlash' : isAvans ? 'Avans berish' : isSalary ? "Oylik to'lovi" : 'Xarajatni kiritish'}
                 description={
                     isSalary
                         ? "Xodim, manba va qaysi oy uchun — to'lov bugungi sana bilan yoziladi"
@@ -580,10 +617,21 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                         olib borardi. */}
                     {isSalary && (
                         <p className="text-meta p-2.5 rounded-lg" style={{ background: "var(--warning-bg)", border: "1px solid var(--warning-border)", color: "var(--text-secondary)" }}>
-                            Oylik kassa xarajati sifatida emas, <b>to&apos;lov (Payout)</b> sifatida
-                            yoziladi — balansda ikki marta hisoblanmasligi uchun. Shu oy uchun
-                            oylik <b>/payroll</b> da tasdiqlangan bo&apos;lishi shart, aks holda
-                            saqlash rad etiladi.
+                            {isAvans ? (
+                                <>
+                                    Avans <b>to&apos;lov (Payout)</b> sifatida yoziladi va shu zahoti
+                                    kassadan chiqadi. Majburiyat tasdiqlanishi <b>shart emas</b> —
+                                    oy hisoblanganda bu summa <b>berilgan</b> tomonida turadi va
+                                    oylik qoldig&apos;idan ayriladi.
+                                </>
+                            ) : (
+                                <>
+                                    Oylik kassa xarajati sifatida emas, <b>to&apos;lov (Payout)</b> sifatida
+                                    yoziladi — balansda ikki marta hisoblanmasligi uchun. Shu oy uchun
+                                    oylik <b>/payroll</b> da tasdiqlangan bo&apos;lishi shart, aks holda
+                                    saqlash rad etiladi.
+                                </>
+                            )}
                         </p>
                     )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -602,7 +650,7 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                             Ikkalasini bitta maydonga tiqish "qaysi oyning
                             oyligi?" savolini javobsiz qoldirardi. */}
                         {isSalary ? (
-                            <Field label="Qaysi oy uchun" required>
+                            <Field label={isAvans ? 'Qaysi oy hisobiga' : 'Qaysi oy uchun'} required>
                                 <Select
                                     value={salaryFor.month}
                                     onChange={(e) => setSalaryFor(prev => ({ ...prev, month: e.target.value }))}
