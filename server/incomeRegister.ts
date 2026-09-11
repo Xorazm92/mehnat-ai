@@ -24,6 +24,7 @@
 // so'ralganda undan foydalanish "1–19 avgust" ni butun avgustga aylantirardi.
 
 import { prisma } from "@/lib/prisma";
+import { matchesIncomeSearch } from "@/lib/incomeSearch";
 import { requireStatementRole } from "@/server/guards";
 import { serialize } from "@/lib/serialize";
 import { resolveRange, type RangePreset, type CustomRange } from "@/lib/dateRange";
@@ -272,16 +273,7 @@ export async function getIncomeRegister(filter: IncomeRegisterFilter = {}) {
       anonymous: !k.companyId,
     })),
   ]
-    .filter((r) => {
-      if (!q) return true;
-      return (
-        (r.companyName ?? "").toLowerCase().includes(q) ||
-        (r.companyInn ?? "").includes(q) ||
-        (r.contractNumber ?? "").toLowerCase().includes(q) ||
-        (r.docRef ?? "").toLowerCase().includes(q) ||
-        (r.note ?? "").toLowerCase().includes(q)
-      );
-    })
+    .filter((r) => matchesIncomeSearch(r, q))
     .sort((a, b) => (b.receivedAt ?? "").localeCompare(a.receivedAt ?? ""));
 
   const totals: IncomeRegisterTotals = {

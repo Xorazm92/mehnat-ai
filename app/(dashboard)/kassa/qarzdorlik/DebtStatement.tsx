@@ -384,13 +384,8 @@ export default function DebtStatement({ statement: s }: { statement: DebtStateme
         columns={columns}
         rowKey={(c) => c.companyId ?? c.customerName}
         caption="Mijozlar bo'yicha hisob-kitob varaqasi"
-        sortKey={table.sortKey}
-        sortDir={table.sortDir}
-        onToggleSort={table.toggleSort}
-        density={table.density}
-        page={table.page}
+        {...table.bind}
         pageSize={pageSize}
-        onPageChange={table.setPage}
         onPageSizeChange={setPageSize}
         onRowClick={setDetail}
         rowLabel={(c) => `${c.customerName} shartnomalarini ochish`}

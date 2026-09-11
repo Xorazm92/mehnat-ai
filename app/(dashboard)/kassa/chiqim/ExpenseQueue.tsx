@@ -323,13 +323,8 @@ export default function ExpenseQueue({ queue }: Props) {
         columns={columns}
         rowKey={(r) => r.id}
         caption={`Chiqim navbati — ${meta.label} guruhi`}
-        sortKey={table.sortKey}
-        sortDir={table.sortDir}
-        onToggleSort={table.toggleSort}
-        density={table.density}
-        page={table.page}
+        {...table.bind}
         pageSize={pageSize}
-        onPageChange={table.setPage}
         onPageSizeChange={setPageSize}
         emptyIcon={<CheckCheck size={28} />}
         emptyTitle="Bu guruhda kutayotgan qator yo'q"

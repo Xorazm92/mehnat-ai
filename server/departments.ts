@@ -1,17 +1,9 @@
 "use server";
 
+import { requireAdmin } from "@/server/guards";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { isAdminRole } from "@/lib/platform/permissions";
 import { updateTag } from "next/cache";
 import { serialize } from "@/lib/serialize";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-  if (!isAdminRole(session.user.role as string)) throw new Error("Forbidden");
-  return session;
-}
 
 export async function getDepartments() {
   await requireAdmin();

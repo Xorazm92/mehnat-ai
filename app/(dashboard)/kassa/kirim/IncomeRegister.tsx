@@ -37,6 +37,7 @@ import { DateField } from "@/components/ui/DateField";
 import { Field } from "@/components/ui/Field";
 import { usePageSize } from "@/hooks/usePageSize";
 import { useTableState } from "@/hooks/useTableState";
+import { matchesIncomeSearch } from "@/lib/incomeSearch";
 import { formatNum, formatUzDate } from "@/lib/platform/format";
 import { friendlyError } from "@/lib/actionError";
 import { exportRowsToExcel } from "@/lib/exportTable";
@@ -143,14 +144,7 @@ export default function IncomeRegister({ companies, refreshKey }: Props) {
   const visible = useMemo(() => {
     const q = table.debouncedSearch.trim().toLowerCase();
     if (!q) return rows;
-    return rows.filter(
-      (r) =>
-        (r.companyName ?? "").toLowerCase().includes(q) ||
-        (r.companyInn ?? "").includes(q) ||
-        (r.contractNumber ?? "").toLowerCase().includes(q) ||
-        (r.docRef ?? "").toLowerCase().includes(q) ||
-        (r.note ?? "").toLowerCase().includes(q)
-    );
+    return rows.filter((r) => matchesIncomeSearch(r, q));
   }, [rows, table.debouncedSearch]);
 
   // Kesim o'zgarsa birinchi sahifaga. (Qidiruv va sahifa `useTableState` ning
@@ -386,13 +380,8 @@ export default function IncomeRegister({ companies, refreshKey }: Props) {
           columns={columns}
           rowKey={(r) => r.id}
           caption="Kirim reyestri — davr bo'yicha barcha tushumlar"
-          sortKey={table.sortKey}
-          sortDir={table.sortDir}
-          onToggleSort={table.toggleSort}
-          density={table.density}
-          page={table.page}
+          {...table.bind}
           pageSize={pageSize}
-          onPageChange={table.setPage}
           onPageSizeChange={setPageSize}
           loading={pending && rows.length === 0}
           onRowClick={setDetail}

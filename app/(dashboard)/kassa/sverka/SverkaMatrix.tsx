@@ -21,20 +21,32 @@
 import React from "react";
 import { EmptyState, Money } from "@/components/ui";
 import { formatUzDate } from "@/lib/platform/format";
+import type { SverkaDay } from "@/lib/pos/reconcile";
 import { AlertTriangle, Scale } from "lucide-react";
 
-export interface MatrixDay {
-  date: string;
-  byDevice: Record<string, number>;
-  kassaCard: number;
-  byTerminal: Record<string, { fact: number; gross: number; commission: number }>;
-  bankFact: number;
-  bankGross: number;
-  commission: number;
-  diff: number;
-  diffFact: number;
-  approximateDate: boolean;
-}
+/**
+ * Bu jadval `SverkaDay` ning FAQAT BIR QISMINI ishlatadi (`kassaCash` va
+ * `byChannel` bu yerda chizilmaydi), shuning uchun tor shartnoma qoladi.
+ *
+ * Lekin u QO'LDA QAYTA YOZILMAYDI — `Pick` orqali manbaga bog'lanadi.
+ * Ilgari bu interfeys `lib/pos/reconcile.ts` dagi maydonlarning nusxasi edi:
+ * manbada maydon nomi o'zgarsa yoki olib tashlansa, bu yerda hech narsa
+ * sezilmasdi va komponent mavjud bo'lmagan maydonni o'qishda `undefined`
+ * chizardi. Endi bunday o'zgarish kompilyatsiya xatosi beradi.
+ */
+export type MatrixDay = Pick<
+  SverkaDay,
+  | "date"
+  | "byDevice"
+  | "kassaCard"
+  | "byTerminal"
+  | "bankFact"
+  | "bankGross"
+  | "commission"
+  | "diff"
+  | "diffFact"
+  | "approximateDate"
+>;
 
 interface Props {
   days: MatrixDay[];

@@ -187,14 +187,9 @@ const DocumentsModule: React.FC<Props> = ({ documents, companies, lang, canEdit,
                         rows={filtered}
                         columns={docColumns}
                         rowKey={d => d.id}
-                        sortKey={table.sortKey}
-                        sortDir={table.sortDir}
-                        onToggleSort={table.toggleSort}
-                        density={table.density}
-                        page={table.page}
+                        {...table.bind}
                         pageSize={pageSize}
                         onPageSizeChange={setPageSize}
-                        onPageChange={table.setPage}
                         emptyIcon={<FileText size={36} />}
                         emptyTitle="Hujjatlar yo'q"
                     />

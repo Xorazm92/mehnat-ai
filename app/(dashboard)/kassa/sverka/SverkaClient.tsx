@@ -22,6 +22,7 @@ import {
 import SverkaMatrix, { type MatrixDay } from "./SverkaMatrix";
 import ChannelMatrix, { type ChannelTotalsView } from "./ChannelMatrix";
 import type { PosChannel } from "@/lib/pos/types";
+import type { SverkaTotals } from "@/lib/pos/reconcile";
 import { formatNum } from "@/lib/platform/format";
 import { useTabParam } from "@/hooks/useTabParam";
 import { SVERKA_TAB_IDS, type SverkaTab } from "@/lib/sverkaTabs";
@@ -33,12 +34,16 @@ interface Terminal {
   id: string; code: string; channel: string; channelLabel: string; label: string | null;
   inScope: boolean; scopeNote: string | null; outsideAmount: number;
 }
-interface Totals {
-  kassaCard: number; kassaCash: number; bankFact: number; bankGross: number;
-  commission: number; diff: number; diffFact: number; approximateAmount: number;
+/**
+ * `SverkaTotals` ning ekran ko'rinishi: `byChannel` da serverdan kelgan
+ * qiymatlar allaqachon serializatsiya qilingan (`ChannelTotalsView`),
+ * qolgan maydonlar esa AYNAN manbadagi kabi — shuning uchun ular qo'lda
+ * qayta yozilmaydi, `Omit` orqali olinadi.
+ */
+type Totals = Omit<SverkaTotals, "byChannel"> & {
   /** Oy × kanal kesimi — faqat uchragan kanallar bo'ladi. */
   byChannel: Partial<Record<PosChannel, ChannelTotalsView>>;
-}
+};
 
 export interface SverkaData {
   range: { from: string; to: string };
@@ -238,6 +243,22 @@ export default function SverkaClient({
               yorlig'idagi qavs aytardi. Endi tartib o'qilishning o'zi
               tenglamani ko'rsatadi va farq nolga tengmi degan savolga
               oxirgi katak SO'Z bilan javob beradi. */}
+          {/* RAIL FAQAT MA'LUMOT BO'LGANDA.
+              Ilgari u har doim chizilardi va bo'sh davrda oltita katakdan
+              beshtasi NOL ko'rsatardi: "Komissiya 0 so'm" degan yozuv bankdan
+              komissiya USHLANMAGAN degan ma'no berardi, holbuki hech narsa
+              ma'lum emas edi. Bu loyihaning o'z qoidasiga zid — "to'lamadi"
+              bilan "bilmayman" bir xil ko'rinmasligi kerak (`Money dashIfZero`,
+              `getPeriodDebtByCompany.collected = null`).
+
+              "Davr: 0 kun" bundan ham yomonroq edi: foydalanuvchi 11 kunlik
+              oraliq tanlagan, ekran esa davr nol kun deb turardi.
+
+              Oltinchi katak ("Holat: Ma'lumot yo'q — kassa hisobotini yuklang")
+              esa pastdagi `EmptyState` bilan AYNAN bir xil narsani aytardi,
+              ya'ni bitta xabar ekranda ikki marta turardi. Endi bo'sh holatni
+              faqat `SverkaMatrix` ning `EmptyState` i aytadi. */}
+          {hasData && (
           <MetricRail
             columns={6}
             items={[
@@ -274,29 +295,27 @@ export default function SverkaClient({
                 label: "Farq",
                 value: `${data.totals.diff > 0 ? "+" : data.totals.diff < 0 ? "−" : ""}${formatNum(Math.abs(Math.round(data.totals.diff)))}`,
                 unit: "so'm",
-                hint: !hasData
-                  ? "solishtirish uchun ma'lumot yo'q"
-                  : data.totals.diff > 0
+                hint:
+                  data.totals.diff > 0
                     ? "bankka yetib bormagan"
                     : data.totals.diff < 0
                       ? "bankda ortiqcha"
                       : "og'ish yo'q",
-                tone: !hasData ? "neutral" : matched ? "success" : "danger",
+                tone: matched ? "success" : "danger",
                 emphasis: true,
               },
               {
                 label: "Holat",
-                value: !hasData ? "Ma'lumot yo'q" : matched ? "Mos keldi" : "Nomuvofiq",
-                hint: !hasData
-                  ? "kassa hisobotini yuklang"
-                  : matched
-                    ? "qo'shimcha ish talab qilinmaydi"
-                    : "kunlik jadvaldan farqli kunni toping",
-                icon: !hasData ? <AlertTriangle size={13} /> : matched ? <Check size={13} /> : <AlertTriangle size={13} />,
-                tone: !hasData ? "neutral" : matched ? "success" : "danger",
+                value: matched ? "Mos keldi" : "Nomuvofiq",
+                hint: matched
+                  ? "qo'shimcha ish talab qilinmaydi"
+                  : "kunlik jadvaldan farqli kunni toping",
+                icon: matched ? <Check size={13} /> : <AlertTriangle size={13} />,
+                tone: matched ? "success" : "danger",
               },
             ]}
           />
+          )}
           {data.totals.approximateAmount > 0 && (
             <p className="text-micro flex items-start gap-1.5" style={{ color: "var(--text-secondary)" }}>
               <AlertTriangle size={12} className="mt-0.5 shrink-0" />

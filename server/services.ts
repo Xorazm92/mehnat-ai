@@ -7,28 +7,13 @@
 // DIQQAT: `Company.activeServices` (matritsa ustunlari) BILAN bog'liq emas.
 // Qarang `prisma/schema.prisma` dagi `Service` izohi.
 
+import { requireAdmin, requireSenior } from "@/server/guards";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { isAdminRole, isSeniorRole } from "@/lib/platform/permissions";
 import { serialize } from "@/lib/serialize";
 import { recordAuditLog } from "@/lib/platform/auditTrail";
 import { updateTag } from "next/cache";
 
 const PERIODICITIES = ["monthly", "quarterly", "yearly", "one_time"] as const;
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-  if (!isAdminRole(session.user.role as string)) throw new Error("Forbidden");
-  return session;
-}
-
-async function requireSenior() {
-  const session = await auth();
-  if (!session) throw new Error("Unauthorized");
-  if (!isSeniorRole(session.user.role as string)) throw new Error("Forbidden");
-  return session;
-}
 
 // ── KATALOG ────────────────────────────────────────────
 
@@ -53,7 +38,7 @@ export async function upsertService(input: {
   isActive?: boolean;
   sortOrder?: number;
 }) {
-  const session = await requireAdmin();
+  const actor = await requireAdmin();
 
   const key = input.key.trim().toLowerCase();
   if (!/^[a-z0-9_]{2,40}$/.test(key)) {
@@ -92,7 +77,7 @@ export async function upsertService(input: {
     : await prisma.service.create({ data });
 
   await recordAuditLog({
-    userId: session.user.id as string,
+    userId: actor.userId,
     action: input.id ? "update" : "create",
     tableName: "Service",
     recordId: result.id,
@@ -111,10 +96,10 @@ export async function upsertService(input: {
  * o'zgaradi.
  */
 export async function archiveService(id: string) {
-  const session = await requireAdmin();
+  const actor = await requireAdmin();
   const result = await prisma.service.update({ where: { id }, data: { isActive: false } });
   await recordAuditLog({
-    userId: session.user.id as string,
+    userId: actor.userId,
     action: "update",
     tableName: "Service",
     recordId: id,
@@ -145,7 +130,7 @@ export async function setCompanyService(input: {
   isActive?: boolean;
   note?: string | null;
 }) {
-  const session = await requireSenior();
+  const actor = await requireSenior();
   if (input.price != null && input.price < 0) throw new Error("Narx manfiy bo'lmaydi");
   const qty = input.qty ?? 1;
   if (!Number.isInteger(qty) || qty < 1) throw new Error("Miqdor kamida 1 bo'lsin");
@@ -170,7 +155,7 @@ export async function setCompanyService(input: {
   });
 
   await recordAuditLog({
-    userId: session.user.id as string,
+    userId: actor.userId,
     action: "update",
     tableName: "CompanyService",
     recordId: result.id,
@@ -182,14 +167,14 @@ export async function setCompanyService(input: {
 }
 
 export async function removeCompanyService(companyId: string, serviceId: string) {
-  const session = await requireSenior();
+  const actor = await requireSenior();
   const row = await prisma.companyService.findUnique({
     where: { companyId_serviceId: { companyId, serviceId } },
   });
   if (!row) return null;
   await prisma.companyService.delete({ where: { id: row.id } });
   await recordAuditLog({
-    userId: session.user.id as string,
+    userId: actor.userId,
     action: "delete",
     tableName: "CompanyService",
     recordId: row.id,

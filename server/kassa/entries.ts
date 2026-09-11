@@ -13,7 +13,6 @@
 
 import { prisma } from "@/lib/prisma";
 import { assertNotSalary, assertPositiveAmount, postExpenseLegs } from "./shared";
-import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { isAdminRole } from "@/lib/platform/permissions";
 import { assertSufficientFunds } from "@/lib/balance";

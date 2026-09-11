@@ -440,14 +440,9 @@ const AttendanceModule: React.FC<Props> = ({ records, staff, lang, canEdit, mont
                         rows={dayRecords}
                         columns={attColumns}
                         rowKey={r => r.id}
-                        sortKey={table.sortKey}
-                        sortDir={table.sortDir}
-                        onToggleSort={table.toggleSort}
-                        density={table.density}
-                        page={table.page}
+                        {...table.bind}
                         pageSize={pageSize}
                         onPageSizeChange={setPageSize}
-                        onPageChange={table.setPage}
                         emptyIcon={<Calendar size={36} />}
                         emptyTitle="Bu kun uchun yozuv yo'q"
                     />

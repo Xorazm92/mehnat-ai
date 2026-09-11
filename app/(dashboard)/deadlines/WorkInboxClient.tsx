@@ -219,13 +219,8 @@ export default function WorkInboxClient({
         rows={filtered}
         columns={columns}
         rowKey={(r) => `${r.kind}-${r.id}`}
-        sortKey={table.sortKey}
-        sortDir={table.sortDir}
-        onToggleSort={table.toggleSort}
-        density={table.density}
-        page={table.page}
+        {...table.bind}
         pageSize={viewSize}
-        onPageChange={table.setPage}
         onPageSizeChange={setViewSize}
         emptyIcon={<Inbox size={36} />}
         emptyTitle={tabCounts.all === 0 ? "Hozircha ish yo'q" : "Bu filtrga mos ish yo'q"}

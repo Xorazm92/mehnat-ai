@@ -588,13 +588,8 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
         columns={journalColumns}
         rowKey={(r) => `${r.sourceType}-${r.id}`}
         caption="Operatsiyalar jurnali — tanlangan davrdagi barcha pul harakati"
-        sortKey={table.sortKey}
-        sortDir={table.sortDir}
-        onToggleSort={table.toggleSort}
-        density={table.density}
-        page={table.page}
+        {...table.bind}
         pageSize={pageSize}
-        onPageChange={table.setPage}
         onPageSizeChange={setPageSize}
         loading={pending && visible.length === 0}
         emptyIcon={<NotebookPen size={28} />}

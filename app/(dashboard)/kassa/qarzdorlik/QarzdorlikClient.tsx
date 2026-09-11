@@ -632,13 +632,8 @@ export default function QarzdorlikClient({
           columns={debtorColumns}
           rowKey={(r) => r.companyId}
           caption="To'lov kutilayotgan firmalar"
-          sortKey={debtorTable.sortKey}
-          sortDir={debtorTable.sortDir}
-          onToggleSort={debtorTable.toggleSort}
-          density={debtorTable.density}
-          page={debtorTable.page}
+          {...debtorTable.bind}
           pageSize={debtorPageSize}
-          onPageChange={debtorTable.setPage}
           onPageSizeChange={setDebtorPageSize}
           emptyIcon={<Users size={28} />}
           emptyTitle={debtors.rows.length === 0 ? "To'lov kutilayotgan firma yo'q" : "Qarzdor topilmadi"}
@@ -780,13 +775,8 @@ export default function QarzdorlikClient({
         columns={svColumns}
         rowKey={(r) => r.key}
         caption="1C va ASRO qarz qoldiqlarining solishtiruvi"
-        sortKey={svTable.sortKey}
-        sortDir={svTable.sortDir}
-        onToggleSort={svTable.toggleSort}
-        density={svTable.density}
-        page={svTable.page}
+        {...svTable.bind}
         pageSize={svPageSize}
-        onPageChange={svTable.setPage}
         onPageSizeChange={setSvPageSize}
         emptyIcon={<Scale size={28} />}
         emptyTitle="Solishtiriladigan qator yo'q"

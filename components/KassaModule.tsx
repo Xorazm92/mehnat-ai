@@ -372,14 +372,9 @@ const KassaModule: React.FC<KassaModuleProps> = ({ companies, payments, debtByCo
                         rows={filteredData}
                         columns={kassaColumns}
                         rowKey={item => item.id}
-                        sortKey={table.sortKey}
-                        sortDir={table.sortDir}
-                        onToggleSort={table.toggleSort}
-                        density={table.density}
-                        page={table.page}
+                        {...table.bind}
                         pageSize={pageSize}
                         onPageSizeChange={setPageSize}
-                        onPageChange={table.setPage}
                         onRowClick={item => openPayment(item)}
                         rowLabel={item => `${item.name} — to'lov kartochkasi`}
                         emptyIcon={<Wallet size={36} />}

@@ -766,14 +766,9 @@ const OrganizationModule: React.FC<Props> = ({ companies, staff, lang, selectedP
               rows={filtered}
               columns={orgColumns}
               rowKey={c => c.id}
-              sortKey={table.sortKey}
-              sortDir={table.sortDir}
-              onToggleSort={table.toggleSort}
-              density={table.density}
-              page={table.page}
+              {...table.bind}
               pageSize={itemsPerPage}
               onPageSizeChange={setItemsPerPage}
-              onPageChange={table.setPage}
               selected={selectedIds}
               onSelectedChange={setSelectedIds}
               onRowClick={c => onCompanySelect(c)}

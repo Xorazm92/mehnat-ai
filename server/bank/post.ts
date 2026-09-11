@@ -24,7 +24,7 @@ import { recordKassaMovement, runCashTx } from "@/lib/cashGate";
 import { ACCOUNTS } from "@/lib/ledger";
 import { EXPENSE_CATEGORY_LABELS, isPostableExpense, type ExpenseCategory } from "@/lib/bank/classifyExpense";
 import { ignorableRejectionReason } from "@/lib/bank/expenseQueue";
-import { autoMatchTransactions, postIncomeTransaction, applyAllocation, periodOf } from "@/lib/bank/importStatement";
+import { postIncomeTransaction, applyAllocation, periodOf } from "@/lib/bank/importStatement";
 import { assertFundingSource } from "@/server/fundingSources";
 import { Prisma } from "@prisma/client";
 

@@ -37,7 +37,23 @@ import { usePathname, useSearchParams } from "next/navigation";
 export type SortDir = "asc" | "desc";
 export type Density = "comfortable" | "compact";
 
+/**
+ * `DataTable` ning holat proplari — `useTableState` ularni tayyor holda
+ * beradi, chaqiruvchi qo'lda ulamaydi.
+ */
+export interface TableBind {
+  sortKey: string | null;
+  sortDir: SortDir;
+  onToggleSort: (key: string) => void;
+  density: Density;
+  page: number;
+  onPageChange: (p: number) => void;
+}
+
 export interface TableState {
+  /** `<DataTable {...table.bind} />` — olti propni bir joyda ulaydi. */
+  bind: TableBind;
+
   search: string;
   debouncedSearch: string;
   setSearch: (v: string) => void;
@@ -229,7 +245,34 @@ export function useTableState({
     sortKey !== defaultSortKey ||
     filterKeys.some((key) => filters[key] !== defaultFilters[key]);
 
+  /**
+   * `DataTable` GA TO'G'RIDAN-TO'G'RI UZATILADIGAN BOG'LANISH.
+   *
+   * Bu olti prop 13 ta ekranda qo'lda, bir xil tartibda qayta yozilgan edi.
+   * Nusxa ko'chirishning narxi ko'rinmas: bittasini TUSHIRIB QOLDIRISH hech
+   * qanday xato bermaydi — `onToggleSort` unutilsa jadval shunchaki
+   * saralanmay qo'yadi, `onPageChange` unutilsa sahifalash ishlamaydi.
+   * Bunday nuqson faqat qo'lda sinab ko'rilganda topiladi.
+   *
+   * Endi: `<DataTable {...table.bind} … />`.
+   *
+   * `useMemo` ZARUR: bog'lanish har renderda yangi obyekt bo'lsa, uni qabul
+   * qiladigan memolangan komponentlar bekorga qayta chiziladi.
+   */
+  const bind = useMemo(
+    () => ({
+      sortKey,
+      sortDir,
+      onToggleSort: toggleSort,
+      density,
+      page,
+      onPageChange: setPage,
+    }),
+    [sortKey, sortDir, toggleSort, density, page, setPage]
+  );
+
   return {
+    bind,
     search,
     debouncedSearch,
     setSearch,

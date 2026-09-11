@@ -509,14 +509,9 @@ const ExpenseModule: React.FC<ExpenseModuleProps> = ({ expenses, lang, userRole 
                     rows={filteredExpenses}
                     columns={expenseColumns}
                     rowKey={e => e.id}
-                    sortKey={table.sortKey}
-                    sortDir={table.sortDir}
-                    onToggleSort={table.toggleSort}
-                    density={table.density}
-                    page={table.page}
+                    {...table.bind}
                     pageSize={pageSize}
                         onPageSizeChange={setPageSize}
-                    onPageChange={table.setPage}
                     selected={selectedIds}
                     onSelectedChange={setSelectedIds}
                     emptyIcon={<Search size={36} />}

@@ -667,14 +667,9 @@ const PayrollTable: React.FC<Props> = ({ staff, companies, operations, currentUs
                         rows={summaries}
                         columns={payrollColumns}
                         rowKey={r => r.employeeId}
-                        sortKey={table.sortKey}
-                        sortDir={table.sortDir}
-                        onToggleSort={table.toggleSort}
-                        density={table.density}
-                        page={table.page}
+                        {...table.bind}
                         pageSize={pageSize}
                         onPageSizeChange={setPageSize}
-                        onPageChange={table.setPage}
                         loading={isLoading}
                         emptyIcon={<Wallet size={36} />}
                         emptyTitle="Bu oy uchun ma'lumot topilmadi"

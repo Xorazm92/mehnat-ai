@@ -425,14 +425,9 @@ const StaffModule: React.FC<Props> = ({ staff, companies, lang, onSave, onDelete
           rows={filteredStaff}
           columns={staffColumns}
           rowKey={p => p.id}
-          sortKey={table.sortKey}
-          sortDir={table.sortDir}
-          onToggleSort={table.toggleSort}
-          density={table.density}
-          page={table.page}
+          {...table.bind}
           pageSize={pageSize}
                         onPageSizeChange={setPageSize}
-          onPageChange={table.setPage}
           selected={selectedIds}
           onSelectedChange={setSelectedIds}
           onRowClick={openCard}
