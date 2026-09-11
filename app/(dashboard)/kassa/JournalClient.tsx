@@ -22,6 +22,7 @@ import {
   ArrowDownRight, ArrowUpRight, Download, Plus, Search, Trash2,
   CheckCircle2, XCircle, Clock, NotebookPen, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Chip } from "@/components/ui/Chip";
 import {
   Badge, DataTable, Money, StatStrip,
   type BadgeTone, type DataColumn, type StatItem } from "@/components/ui";
@@ -425,16 +426,9 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
       <div className="px-3 py-2 space-y-2" style={{ borderBottom: "1px solid var(--card-border)" }}>
         <div className="flex items-center gap-1.5 flex-wrap">
           {PRESETS.map((p) => (
-            <button
-              key={p}
-              onClick={() => setPreset(p)}
-              className="px-2.5 py-1 rounded-lg text-micro font-semibold transition-colors"
-              style={preset === p
-                ? { background: "var(--accent-blue)", color: "var(--on-brand)" }
-                : inputStyle}
-            >
+            <Chip key={p} selected={preset === p} onClick={() => setPreset(p)}>
               {RANGE_LABELS[p]}
-            </button>
+            </Chip>
           ))}
           {preset === "custom" && (
             <>
@@ -460,16 +454,9 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center rounded-lg overflow-hidden" style={{ border: "1px solid var(--card-border)" }}>
             {([["all", "Hammasi"], ["kirim", "Kirim"], ["chiqim", "Chiqim"]] as const).map(([k, label]) => (
-              <button
-                key={k}
-                onClick={() => setKind(k)}
-                className="px-3 py-1.5 text-micro font-semibold"
-                style={kind === k
-                  ? { background: "var(--accent-blue)", color: "var(--on-brand)" }
-                  : { background: "var(--input-bg)", color: "var(--text-secondary)" }}
-              >
+              <Chip key={k} selected={kind === k} onClick={() => setKind(k)}>
                 {label}
-              </button>
+              </Chip>
             ))}
           </div>
           <div className="w-56">
@@ -523,18 +510,15 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center rounded-lg overflow-hidden" style={{ border: "1px solid var(--card-border)" }}>
               {([["chiqim", "Chiqim"], ["kirim", "Kirim"]] as const).map(([k, label]) => (
-                <button
+                <Chip
                   key={k}
-                  type="button"
+                  selected={addKind === k}
                   onClick={() => setAddKind(k)}
-                  className="px-3 py-1.5 text-micro font-semibold inline-flex items-center gap-1"
-                  style={addKind === k
-                    ? { background: k === "kirim" ? "var(--accent-green)" : "var(--accent-red)", color: "var(--on-brand)" }
-                    : { background: "var(--input-bg)", color: "var(--text-secondary)" }}
+                  tone={k === "kirim" ? "var(--accent-green)" : "var(--accent-red)"}
+                  icon={k === "kirim" ? <ArrowDownRight size={12} /> : <ArrowUpRight size={12} />}
                 >
-                  {k === "kirim" ? <ArrowDownRight size={12} /> : <ArrowUpRight size={12} />}
                   {label}
-                </button>
+                </Chip>
               ))}
             </div>
             <MoneyField
@@ -562,14 +546,9 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
             <Button type="submit" variant="primary" size="sm" loading={saving}>
               {saving ? "Yozilmoqda…" : "Saqlash"}
             </Button>
-            <button
-              type="button"
-              onClick={() => setShowAdvanced((v) => !v)}
-              className="text-micro font-semibold underline"
-              style={{ color: "var(--text-muted)" }}
-            >
+            <Button variant="ghost" size="sm" onClick={() => setShowAdvanced((v) => !v)}>
               {showAdvanced ? "Sana/izohni yashirish" : "Sana yoki izoh qo'shish"}
-            </button>
+            </Button>
             <Button variant="secondary" size="sm" onClick={() => setAddOpen(false)}>Yopish</Button>
           </div>
 

@@ -29,11 +29,6 @@ const RAW_BUTTON_BASELINE = [
   // faqat yoʻli, shuning uchun roʻyxat UZUNLIGI ham oʻzgarmaydi.
   "components/cockpit/CockpitPanel.tsx",
   "app/(dashboard)/error.tsx",
-  "app/(dashboard)/kassa/CashDeskTable.tsx",
-  "app/(dashboard)/kassa/JournalClient.tsx",
-  "app/(dashboard)/kassa/PeriodPicker.tsx",
-  "app/(dashboard)/kassa/qarzdorlik/QarzdorlikClient.tsx",
-  "app/(dashboard)/kassa/sverka/SverkaClient.tsx",
   "app/(dashboard)/reports/proof/\\[id\\]/ProofViewClient.tsx",
   "app/global-error.tsx",
   "app/portal/page.tsx",
@@ -75,8 +70,6 @@ const RAW_BUTTON_BASELINE = [
   "components/RiskBadge.tsx",
   "components/RoleContextSwitcher.tsx",
   "components/StaffModule.tsx",
-  "app/(dashboard)/kassa/kirim/KirimKassaClient.tsx",
-  "app/(dashboard)/kassa/kirim/IncomeRegister.tsx",
 ];
 
 const RAW_TABLE_BASELINE = [
@@ -120,9 +113,25 @@ const MODAL_RULES = [
 ];
 
 const RAW_BUTTON_RULE = {
-  selector: "JSXOpeningElement[name.name='button']",
+  // `.icon-btn` sinfi bilan yozilgan BELGILI tugma — RUXSAT ETILGAN yo'l,
+  // xuddi `.erp-table` kabi.
+  //
+  // NEGA. Belgili tugmada matn yo'q, ya'ni `Button` beradigan narsalarning
+  // yarmi (o'lcham shkalasi, uppercase terim, `loading` matn o'rnini egallashi)
+  // ma'nosiz. `.icon-btn` esa aynan shu holat uchun yozilgan va MUHIMROQ
+  // narsani beradi: 44×44 teginish maydoni (Apple HIG / Material 48dp),
+  // CSS'dagi `:hover` va `icon-btn-danger/accent/success` ton variantlari.
+  // Loyihada u 66 joyda ishlatiladi — qoidaga chiqish yo'li qo'yilmasa,
+  // ro'yxat qisqarmaydi va istisno ro'yxati himoya o'rniga teshikka aylanadi.
+  //
+  // Qoida SINFSIZ tugmani ushlaydi: aynan o'sha holatda har ekran o'z hover
+  // va fokus uslubini qayta yozadi (yoki umuman yozmaydi — `SverkaClient`
+  // dagi "Yopish" tugmasi hech qanday uslubsiz, 14px teginish maydoni bilan
+  // turgandi).
+  selector:
+    "JSXOpeningElement[name.name='button']:not(:has(JSXAttribute[name.name='className'] > Literal[value=/icon-btn/]))",
   message:
-    "Xom `<button>`. `components/ui/Button` dan foydalaning — u o'lcham, ton, `loading` (ikki marta yuborishni yopadi), `disabled` va QORONG'I REJIM uchun to'g'ri `--on-*` matn rangini o'zi hal qiladi. Primitiv yetarli bo'lmasa — uni KENGAYTIRING, forklamang.",
+    "Xom `<button>`. `components/ui/Button` dan foydalaning — u o'lcham, ton, `loading` (ikki marta yuborishni yopadi), `disabled` va QORONG'I REJIM uchun to'g'ri `--on-*` matn rangini o'zi hal qiladi. Yoqib/o'chiriladigan filtr uchun `components/ui/Chip` (`aria-pressed` bilan). Faqat BELGILI tugma uchun — `globals.css` dagi `.icon-btn` sinfi. Primitiv yetarli bo'lmasa — uni KENGAYTIRING, forklamang.",
 };
 
 const RAW_TABLE_RULE = {

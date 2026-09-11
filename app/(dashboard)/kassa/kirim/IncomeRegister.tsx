@@ -28,6 +28,7 @@ import {
   type BadgeTone,
   type DataColumn,
   type StatItem,
+  Chip,
 } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { CompanySelect } from "@/components/ui/CompanySelect";
@@ -291,20 +292,9 @@ export default function IncomeRegister({ companies, refreshKey }: Props) {
         {PRESETS.map((p) => {
           const active = preset === p;
           return (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPreset(p)}
-              aria-pressed={active}
-              className="px-2.5 py-1.5 rounded-lg text-meta transition-colors"
-              style={
-                active
-                  ? { background: "var(--accent-blue)", color: "var(--on-brand)", border: "1px solid var(--accent-blue)" }
-                  : { background: "var(--input-bg)", border: "1px solid var(--card-border)", color: "var(--text)" }
-              }
-            >
+            <Chip key={p} size="md" selected={active} onClick={() => setPreset(p)}>
               {RANGE_LABELS[p]}
-            </button>
+            </Chip>
           );
         })}
       </div>

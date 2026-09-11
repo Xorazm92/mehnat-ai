@@ -47,7 +47,7 @@ export default function PeriodPicker({ period }: { period: string }) {
     <div className="flex items-center gap-1.5">
       <button
         onClick={() => go(shift(period, -1))}
-        className="p-1.5 rounded-lg"
+        className="icon-btn"
         style={btn}
         aria-label="Oldingi oy"
       >
@@ -58,7 +58,7 @@ export default function PeriodPicker({ period }: { period: string }) {
 
       <button
         onClick={() => go(shift(period, 1))}
-        className="p-1.5 rounded-lg"
+        className="icon-btn"
         style={btn}
         aria-label="Keyingi oy"
       >

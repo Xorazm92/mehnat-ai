@@ -213,7 +213,7 @@ export default function SverkaClient({
         >
           {msg.tone === "ok" ? <Check size={14} className="mt-0.5" /> : <AlertTriangle size={14} className="mt-0.5" />}
           <span className="flex-1">{msg.text}</span>
-          <button onClick={() => setMsg(null)} aria-label="Yopish"><X size={14} /></button>
+          <button type="button" className="icon-btn" onClick={() => setMsg(null)} aria-label="Yopish"><X size={14} /></button>
         </div>
       )}
 

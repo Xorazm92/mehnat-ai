@@ -1323,15 +1323,15 @@ function UnmatchedCard({
 
           {/* QATOR HAQIQATDA KIRIM EMASMI? — oylik o'tkazmalari kabi.
               Buni yopishning yagona yo'li ilgari navbatni to'ldirib qo'yardi. */}
-          <button
-            type="button"
-            onClick={() => setExpenseMode(true)}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-2"
             disabled={busy}
-            className="mt-2 text-micro underline underline-offset-2"
-            style={{ color: "var(--text-muted)" }}
+            onClick={() => setExpenseMode(true)}
           >
             Bu mijoz to&apos;lovi emas — chiqim sifatida yozish (oylik, yordam…) →
-          </button>
+          </Button>
         </>
       )}
     </div>

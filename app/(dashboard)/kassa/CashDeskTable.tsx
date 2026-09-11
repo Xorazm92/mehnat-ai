@@ -22,7 +22,7 @@
 
 import React, { useMemo, useState } from "react";
 import { formatNum } from "@/lib/platform/format";
-import { DataTable, Money, StatStrip, type DataColumn, type StatItem } from "@/components/ui";
+import { Chip, DataTable, Money, StatStrip, type DataColumn, type StatItem } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/exportTable";
 import { Wallet, AlertTriangle, Eye, EyeOff, Download } from "lucide-react";
@@ -270,18 +270,9 @@ export default function CashDeskTable({ report }: Props) {
       >
         <div className="flex items-center gap-1.5 flex-wrap">
           {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className="px-2.5 py-1 rounded-lg text-micro font-semibold whitespace-nowrap"
-              style={
-                t.key === active.key
-                  ? { background: "var(--accent-blue)", color: "var(--on-brand)" }
-                  : { background: "var(--input-bg)", color: "var(--text-secondary)" }
-              }
-            >
+            <Chip key={t.key} selected={t.key === active.key} onClick={() => setTab(t.key)}>
               {t.label} ({t.rows.length})
-            </button>
+            </Chip>
           ))}
         </div>
         <div className="flex items-center gap-3">
@@ -289,14 +280,14 @@ export default function CashDeskTable({ report }: Props) {
             Bo&apos;lim qoldig&apos;i: <b style={{ color: "var(--text)" }}>{formatNum(subtotal.closing)}</b>
           </span>
           {dormantCount > 0 && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setShowDormant((v) => !v)}
-              className="flex items-center gap-1 text-micro"
-              style={{ color: "var(--text-muted)" }}
+              icon={showDormant ? <EyeOff size={12} /> : <Eye size={12} />}
             >
-              {showDormant ? <EyeOff size={12} /> : <Eye size={12} />}
               {showDormant ? "Harakatsizlarni yashirish" : `Harakatsiz ${dormantCount} ta`}
-            </button>
+            </Button>
           )}
         </div>
       </div>

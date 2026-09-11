@@ -545,9 +545,20 @@ export default function QarzdorlikClient({
             const b = aging[s.key];
             const active = stageFilter === s.key;
             return (
+              // KARTA SHAKLIDAGI FILTR. `Chip` mos kelmaydi — u bir qatorli
+              // yorliq uchun; bu yerda uch qatorli plitka (sarlavha + summa +
+              // izoh). `Button` ham mos emas: u matnni uppercase qiladi va
+              // bitta qatorga tekislaydi. `aria-pressed` qo'lda beriladi —
+              // busiz ekran o'quvchi filtr yoqilganini ayta olmasdi.
+              //
+              // Direktiva AYNAN `<button` dan oldingi qatorda turishi shart:
+              // `eslint-disable-next-line` faqat bitta keyingi qatorni qamraydi
+              // va izoh bloki orasiga tushsa jim ravishda ishlamay qoladi.
+              // eslint-disable-next-line no-restricted-syntax
               <button
                 key={s.key}
                 type="button"
+                aria-pressed={active}
                 onClick={() => setStageFilter(active ? null : s.key)}
                 disabled={b.count === 0}
                 className="rounded-xl px-3 py-2.5 text-left transition-opacity disabled:opacity-45 disabled:cursor-default"
