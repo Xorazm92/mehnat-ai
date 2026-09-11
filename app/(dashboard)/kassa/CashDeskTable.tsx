@@ -76,7 +76,7 @@ const COLUMNS: DataColumn<Row>[] = [
             <div className="text-micro" style={{ color: "var(--text-muted)" }}>{r.detail}</div>
           )}
           {mismatch && (
-            <div className="text-micro" style={{ color: "var(--danger)" }}>
+            <div className="text-micro tabular-nums" style={{ color: "var(--danger)" }}>
               Tranzit daftari: {formatNum(r.transitBalance ?? 0)} — farq{" "}
               {formatNum((r.transitBalance ?? 0) - r.closing)}
             </div>

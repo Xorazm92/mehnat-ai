@@ -4,7 +4,14 @@
 //
 // Ustunlar DINAMIK (har apparat va har terminal — alohida ustun), shuning
 // uchun `DataTable` emas, o'z jadvali: `DataTable` bir xil shakldagi qator
-// ro'yxati uchun, bu yerda esa ustunlar ma'lumotdan hosil bo'ladi.
+// ro'yxati uchun (`DataColumn[]` kompilyatsiya vaqtida ma'lum), bu yerda esa
+// ustunlar MA'LUMOTDAN hosil bo'ladi va har terminal ikkita ustun beradi.
+//
+// ⚠️ XOM `<table>` ISTISNOSI — ESLint `RAW_TABLE_RULE` ruxsat bergan yo'l:
+// jadval `.erp-table` sinfi bilan yoziladi va SABABI shu izohda turadi
+// (yuqoridagi xatboshi). `.erp-table` pul ustunlariga `tabular-nums` beradi,
+// ya'ni `DataTable` dan olinmagan yagona narsa — saralash va CSV eksporti,
+// ular esa pivot to'rda ma'noga ega emas.
 //
 // Har terminal uchun IKKI ustun beriladi — FAKT va BRUTTO. Faqat faktni
 // ko'rsatish har kuni komissiya hajmida soxta "kamomad" chizardi; faqat
@@ -58,7 +65,7 @@ export default function SverkaMatrix({ days, devices, terminals, totals }: Props
 
   return (
     <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid var(--card-border)" }}>
-      <table className="w-full text-meta border-collapse">
+      <table className="erp-table w-full text-meta border-collapse">
         {/* `DataTable` da `caption` majburiy; bu jadval dinamik ustunli
             pivot bo'lgani uchun qo'lda qoladi — lekin nomsiz qolmaydi. */}
         <caption className="sr-only">

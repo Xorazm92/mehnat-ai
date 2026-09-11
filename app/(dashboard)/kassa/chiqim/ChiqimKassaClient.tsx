@@ -169,7 +169,7 @@ const SPEND_CATEGORIES = ["ijara", "aloqa", "ovqat", "soliq", "bank_komissiya", 
 
 /** Kanal tarixi — kartochka ichida ochiladigan jadval. */
 const LEDGER_COLUMNS: DataColumn<LedgerRow>[] = [
-  { key: "date", header: "Sana", cell: (e) => formatUzDate(e.date), sortValue: (e) => e.date, width: "110px", mobile: "meta" },
+  { key: "date", header: "Sana", cell: (e) => <span className="tabular-nums">{formatUzDate(e.date)}</span>, sortValue: (e) => e.date, width: "110px", mobile: "meta" },
   {
     key: "direction",
     header: "Yo'nalish",
@@ -262,7 +262,7 @@ const PAYOUT_COLUMNS: DataColumn<PayoutRow>[] = [
   {
     key: "paidAt",
     header: "Berilgan sana",
-    cell: (p) => formatUzDate(p.paidAt),
+    cell: (p) => <span className="tabular-nums">{formatUzDate(p.paidAt)}</span>,
     sortValue: (p) => p.paidAt,
     mobile: "meta",
   },

@@ -128,7 +128,7 @@ export default function ExpenseQueue({ queue }: Props) {
     {
       key: "date",
       header: "Sana",
-      cell: (r) => formatUzDate(r.valueDate),
+      cell: (r) => <span className="tabular-nums">{formatUzDate(r.valueDate)}</span>,
       sortValue: (r) => r.valueDate,
       width: "110px",
       mobile: "meta",

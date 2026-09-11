@@ -97,7 +97,6 @@ const RAW_TABLE_BASELINE = [
   "app/(dashboard)/kassa/qarzdorlik/DebtStatement.tsx",
   "app/(dashboard)/kassa/qarzdorlik/QarzdorlikClient.tsx",
   "app/(dashboard)/kassa/sverka/SverkaClient.tsx",
-  "app/(dashboard)/kassa/sverka/SverkaMatrix.tsx",
   "components/admin/AdminUserManager.tsx",
   "components/admin/RolePermissionMatrix.tsx",
   "components/admin/RoleViewEditor.tsx",

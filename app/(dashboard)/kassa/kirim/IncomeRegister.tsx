@@ -202,7 +202,7 @@ export default function IncomeRegister({ companies, refreshKey }: Props) {
       {
         key: "date",
         header: "Sana",
-        cell: (r) => (r.receivedAt ? formatUzDate(r.receivedAt) : "—"),
+        cell: (r) => <span className="tabular-nums">{r.receivedAt ? formatUzDate(r.receivedAt) : "—"}</span>,
         sortValue: (r) => r.receivedAt ?? "",
         exportValue: (r) => (r.receivedAt ? formatUzDate(r.receivedAt) : ""),
         width: "110px",

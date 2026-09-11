@@ -329,33 +329,44 @@ export default function DebtStatement({ statement: s }: { statement: DebtStateme
         style={{ borderBottom: "1px solid var(--card-border)" }}
       >
         <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
+          {/* Shartnoma turi filtri — `ui/Button` ustida (Faza 6).
+              Tanlangan holat RANG bilan ko'rsatiladi: `BK` doimiy, `RK` bir
+              martalik shartnoma va bu farq jadval bo'ylab bir xil rang kodida
+              yuradi. `style` ataylab `Button` ning o'z variantidan keyin
+              qo'llanadi (`{...rest}` spread tartibi) — shusiz turga bog'liq
+              rang yo'qolib, ikkala filtr bir xil ko'rinardi.
+
+              `--on-brand` EMAS `#fff`: dark rejimda qattiq oq rangli fon
+              ustida o'qilmay qolardi. */}
+          <Button
+            size="sm"
+            variant={kind === "all" ? "primary" : "secondary"}
             onClick={() => setKind("all")}
             aria-pressed={kind === "all"}
-            className="px-2.5 py-1 rounded-lg text-micro font-semibold transition-colors"
-            style={kind === "all"
-              // `#fff` EMAS: `--on-brand` dark rejimda qorayadi, qattiq oq esa
-              // rangli fon ustida o'qilmay qolardi.
-              ? { background: "var(--accent-blue)", color: "var(--on-brand)" }
-              : { background: "var(--input-bg)", color: "var(--text-secondary)" }}
+            style={
+              kind === "all"
+                ? { background: "var(--accent-blue)", color: "var(--on-brand)" }
+                : undefined
+            }
           >
             Hammasi
-          </button>
+          </Button>
           {s.byKind.map((k) => (
-            <button
+            <Button
               key={k.kind}
-              type="button"
+              size="sm"
+              variant={kind === k.kind ? "primary" : "secondary"}
               onClick={() => setKind(k.kind)}
               aria-pressed={kind === k.kind}
-              className="px-2.5 py-1 rounded-lg text-micro font-semibold transition-colors"
-              style={kind === k.kind
-                ? { background: KIND_TONE[k.kind], color: "var(--on-brand)" }
-                : { background: "var(--input-bg)", color: "var(--text-secondary)" }}
+              style={
+                kind === k.kind
+                  ? { background: KIND_TONE[k.kind], color: "var(--on-brand)" }
+                  : undefined
+              }
               title={`qarz ${formatNum(k.debt)} · avans ${formatNum(k.advance)}`}
             >
               {k.label} ({k.count})
-            </button>
+            </Button>
           ))}
         </div>
         <TableToolbar
