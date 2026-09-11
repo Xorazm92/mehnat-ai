@@ -9,10 +9,13 @@
 //
 // Sabab MAJBURIY: tugma sabab yozilmaguncha faol bo'lmaydi. Server ham
 // tekshiradi — bu faqat qulaylik qatlami.
+import { SearchInput } from "@/components/ui/SearchInput";
 import { useState, useTransition, useEffect } from "react";
 import { toast } from "sonner";
 import { friendlyError } from "@/lib/actionError";
-import { Ban, RotateCcw, Search } from "lucide-react";
+import {
+  Ban, RotateCcw,
+} from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { getTemplateOverrides, setObligationOverride, removeObligationOverride } from "@/server/obligationOverrides";
@@ -79,16 +82,14 @@ export function TemplateOverridesPanel({
       description="O'chirilgan firmalar uchun bu majburiyat KELAJAKDA yaratilmaydi. O'tgan davrlar tegilmaydi.">
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
-            <input
-              aria-label="Firma qidirish"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Firma nomi yoki INN"
-              className="erp-input pl-8 text-xs"
-            />
-          </div>
+          <SearchInput
+            className="flex-1"
+            value={q}
+            onChange={setQ}
+            placeholder="Firma nomi yoki INN"
+            ariaLabel="Firma qidirish"
+            inputClassName="text-xs"
+          />
           <span className="text-meta whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
             {disabledCount} o&apos;chirilgan
           </span>

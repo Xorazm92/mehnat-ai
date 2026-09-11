@@ -15,6 +15,7 @@ export { Select, type SelectProps, type SelectSize } from "./Select";
 export { CompanySelect, type CompanySelectProps, type CompanyOption } from "./CompanySelect";
 export { Badge, TONE_COLORS, type BadgeProps, type BadgeTone } from "./Badge";
 export { Chip, type ChipProps } from "./Chip";
+export { SearchInput, type SearchInputProps } from "./SearchInput";
 export { Avatar, initialsOf, type AvatarProps, type AvatarSize } from "./Avatar";
 export { IdentityCell, type IdentityCellProps } from "./IdentityCell";
 export { Card, type CardProps } from "./Card";

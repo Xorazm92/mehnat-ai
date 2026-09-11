@@ -60,14 +60,7 @@ export default function WeeklyFlowChart({ weeks }: { weeks: WeekPoint[] }) {
   const hasData = totalIn > 0 || totalOut > 0;
 
   return (
-    <div
-      className="rounded-xl overflow-hidden h-full flex flex-col"
-      style={{
-        background: "var(--card-bg)",
-        border: "1px solid var(--card-border)",
-        boxShadow: "var(--card-shadow)",
-      }}
-    >
+    <div className="dashboard-card overflow-hidden h-full flex flex-col">
       <div
         className="px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap"
         style={{ borderBottom: "1px solid var(--rule)" }}

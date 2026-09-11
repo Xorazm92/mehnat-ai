@@ -1,11 +1,11 @@
 "use client";
 
+import { SearchInput } from "@/components/ui/SearchInput";
 import React, { useState, useRef, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  Upload, Link2, EyeOff, CreditCard, Wallet, Search, AlertTriangle, Plus,
-  Banknote, CalendarDays, Landmark, Inbox,
+  Upload, Link2, EyeOff, CreditCard, Wallet, AlertTriangle, Plus, Banknote, CalendarDays, Landmark, Inbox,
 } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { todayKey, formatNum, formatUzDate, submitOnCtrlEnter } from "@/lib/platform/format";
@@ -960,21 +960,12 @@ export default function KirimKassaClient({ accounts, unmatched, companies, kpi, 
           <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
             Moslashtirilmagan kirimlar ({totalUnmatched})
           </h2>
-          <div className="relative">
-            <Search
-              size={14}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-              style={{ color: "var(--text-muted)" }}
-              aria-hidden="true"
-            />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Nom, STIR yoki shartnoma"
-              aria-label="Moslashtirilmagan kirimlar ichidan qidirish"
-              className="erp-input pl-8"
-            />
-          </div>
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Nom, STIR yoki shartnoma"
+            ariaLabel="Moslashtirilmagan kirimlar ichidan qidirish"
+          />
         </div>
 
         {filteredUnmatched.length === 0 ? (

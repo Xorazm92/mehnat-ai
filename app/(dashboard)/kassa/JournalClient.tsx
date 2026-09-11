@@ -19,10 +19,11 @@ import { useTableState } from "@/hooks/useTableState";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
-  ArrowDownRight, ArrowUpRight, Download, Plus, Search, Trash2,
-  CheckCircle2, XCircle, Clock, NotebookPen, AlertTriangle } from "lucide-react";
+  ArrowDownRight, ArrowUpRight, Download, Plus, Trash2, CheckCircle2, XCircle, Clock, NotebookPen, AlertTriangle,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
+import { SearchInput } from "@/components/ui/SearchInput";
 import {
   Badge, DataTable, Money, StatStrip,
   type BadgeTone, type DataColumn, type StatItem } from "@/components/ui";
@@ -462,21 +463,13 @@ export default function JournalClient({ userRole, incomeCategories, expenseCateg
           <div className="w-56">
             <FundingSourceSelect value={channelId} onChange={setChannelId} allowEmpty />
           </div>
-          <div className="relative">
-            <Search
-              size={13}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-              style={{ color: "var(--text-muted)" }}
-              aria-hidden="true"
-            />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Kim, toifa yoki izoh…"
-              aria-label="Jurnal ichidan qidirish"
-              className="erp-input w-56 pl-8"
-            />
-          </div>
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Kim, toifa yoki izoh…"
+            ariaLabel="Jurnal ichidan qidirish"
+            inputClassName="w-56"
+          />
           <span className="text-micro ml-auto" style={{ color: "var(--text-muted)" }}>
             {pending ? "Yuklanmoqda…" : `${visible.length} qator`}
           </span>

@@ -63,13 +63,11 @@ const ACTIONS = [
 
 export default function QuickActions() {
   return (
+    // `Card` primitivi bu yerda MOS KELMAYDI: u `<div>` chizadi, bu blok esa
+    // `<nav aria-label>` bo'lishi kerak — aks holda ekran o'quvchi uchun
+    // "Tezkor amallar" bo'limi yo'qoladi. Qobiq esa umumiy sinfdan olinadi.
     <nav
-      className="rounded-xl overflow-hidden h-full flex flex-col"
-      style={{
-        background: "var(--card-bg)",
-        border: "1px solid var(--card-border)",
-        boxShadow: "var(--card-shadow)",
-      }}
+      className="dashboard-card overflow-hidden h-full flex flex-col"
       aria-label="Tezkor amallar"
     >
       <div className="px-4 py-2.5" style={{ borderBottom: "1px solid var(--rule)" }}>
