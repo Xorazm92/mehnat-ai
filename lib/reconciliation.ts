@@ -18,7 +18,7 @@
 import { Prisma } from "@prisma/client";
 import { getAvailableBalance } from "@/lib/balance";
 import { getLedgerCashBalance, LEDGER_DRIFT_TOLERANCE } from "@/lib/ledger";
-import { KASSA_START_PERIOD } from "@/lib/constants";
+import { KASSA_START_DATE, KASSA_START_PERIOD } from "@/lib/constants";
 import { formatNum } from "@/lib/platform/format";
 
 type Db = Prisma.TransactionClient;
@@ -610,20 +610,34 @@ export async function runReconciliation(db: Db): Promise<ReconCheck[]> {
   // bitta pulni IKKI MARTA hisoblaydi — shuning uchun oylik toifasi
   // `KassaEntry` da taqiqlangan (`lib/salaryCategory.ts`, `lib/cashGate.ts`).
   //
-  // Ammo taqiq YOZUV yo'liga qo'yilgan, TARIXGA emas. Prod jurnalida
-  // (2026-09-11) `KassaEntry → SALARY_EXPENSE` bo'yicha netto 660 314 246
-  // so'm turibdi — taqiqdan oldingi import qoldig'i. Shu qatorlar tirik
+  // Ammo taqiq YOZUV yo'liga qo'yilgan, TARIXGA emas: taqiqdan oldingi
+  // import qoldig'i hali ham `KassaEntry` da yotibdi. Shu qatorlar tirik
   // ekan, oylik ikki manbadan sanaladi va `Payout` yo'liga to'liq o'tib
   // bo'lmaydi.
   //
-  // Bu tekshiruv aynan shu qoldiqni ko'rsatadi. Hech narsa tuzatilmaydi:
-  // storno qilishda qarshi hisob (SALARY_EXPENSE ↔ CASH) qat'iy nazorat
-  // talab qiladi, aks holda kassa qoldig'i sun'iy shishadi.
+  // ⚠️ DAVR CHEGARASI — TUZATILDI (2026-09-11).
+  //
+  // Bu tekshiruv avval BUTUN tarixni sanardi va prodda 162 qator /
+  // 660 314 246 so'm deb ko'rsatardi. Raqam SHISHIRILGAN edi: `lib/balance.ts`
+  // ikkala manbani ham `KASSA_START_DATE` dan boshlab sanaydi
+  // (`kassaEntry.date >= ...` va `payout.paidAt >= ...`), ya'ni chegaradan
+  // oldingi qator balansga UMUMAN ta'sir qilmaydi va ikki marta ham
+  // sanalmaydi.
+  //
+  // Prodda farq katta: 162 / 660 314 246 dan 81 / 390 969 308 ga tushadi —
+  // qolgan 81 qator (269 344 938) 2026-07 ga tegishli va u davr 2026-08-23
+  // da ATAYLAB tizimdan chiqarilgan ("re-baseline: loyiha 2026-08-01 da ishga
+  // tushdi" — 45 ta `Payout` aynan shu sabab bilan storno qilingan).
+  //
+  // Invariant balansning o'zi bilan bir xil chegarada turishi shart, aks
+  // holda u hech qachon yashil bo'lmaydigan, ya'ni hech kim qaramaydigan
+  // ogohlantirishga aylanadi.
   const salaryHomes = await db.$queryRaw<{ cnt: bigint; total: number }[]>`
     SELECT count(*)::bigint AS cnt, coalesce(sum(k.amount), 0)::float8 AS total
       FROM "KassaEntry" k
      WHERE k."deletedAt" IS NULL
        AND k.type = 'expense'
+       AND k.date >= ${KASSA_START_DATE}
        AND k.category ~* 'oylik|ish\\s*haqi|mehnat\\s*haqi|maosh|zarplata|зарплат|ойлик|иш\\s*хак'`;
 
   const salaryInKassa = n(salaryHomes[0]?.cnt);
@@ -638,7 +652,8 @@ export async function runReconciliation(db: Db): Promise<ReconCheck[]> {
       salaryInKassa === 0
         ? "Kassa chiqimlarida oylik toifali yozuv yo'q — oylik faqat Payout jadvalida"
         : `${salaryInKassa} ta kassa chiqimi oylik toifasida ` +
-          `(${formatNum(salaryInKassaSum)} so'm) — bu Payout bilan birga ikki marta sanaladi`,
+          `(${formatNum(salaryInKassaSum)} so'm, ${KASSA_START_PERIOD} dan beri) — ` +
+          `bu Payout bilan birga ikki marta sanaladi`,
     action:
       salaryInKassa > 0
         ? "Taqiqdan oldingi import qoldig'i. Storno qilishda qarshi hisob " +
