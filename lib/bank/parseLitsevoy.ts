@@ -24,6 +24,7 @@ import {
   extractAccount,
   extractInn,
   looksLikeDate,
+  resolveMovement,
   toAmount,
   toDate,
 } from "./normalize";
@@ -167,10 +168,10 @@ export function parseLitsevoy(rows: SheetRow[]): ParsedStatement {
       const valueDate = toDate(dateCell);
       if (!valueDate) continue;
 
-      const debit = toAmount(row[colDebit]);
-      const credit = toAmount(row[colCredit]);
-      // Nol summali qator — yakuniy "Итого" kabi xizmat qatori; tashlanadi.
-      if (debit === 0 && credit === 0) continue;
+      // Sof harakati nol bo'lgan qator — yakuniy "Итого" kabi xizmat qatori
+      // yoki o'zini yopgan storno; tashlanadi.
+      const movement = resolveMovement(toAmount(row[colDebit]), toAmount(row[colCredit]));
+      if (!movement) continue;
 
       // HTML eksportida kontragent, nomi va to'lov maqsadi BITTA katakda,
       // satr tashlash bilan ajratilgan. Excel eksportida esa ular keyingi
@@ -186,8 +187,8 @@ export function parseLitsevoy(rows: SheetRow[]): ParsedStatement {
           valueDate,
           docNumber: cleanText(row[colDoc]),
           opCode: cleanText(row[colOp]),
-          direction: credit > 0 ? "income" : "expense",
-          amount: credit > 0 ? credit : debit,
+          direction: movement.direction,
+          amount: movement.amount,
           counterpartyInn: extractInn(partyCell),
           counterpartyAccount: extractAccount(partyCell),
           counterpartyName: inlineName,

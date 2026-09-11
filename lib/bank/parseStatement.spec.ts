@@ -15,7 +15,7 @@ import {
   extractCardTransfer,
   isPostableExpense,
 } from "@/lib/bank/classifyExpense";
-import { toAmount, toDate, extractInn, extractAccount, looksLikeDate } from "@/lib/bank/normalize";
+import { toAmount, toDate, extractInn, extractAccount, looksLikeDate, resolveMovement } from "@/lib/bank/normalize";
 import { parsePlastikFile } from "@/lib/bank/parsePlastik";
 import { looksLikeHtml, decodeHtml, readHtmlTables } from "@/lib/bank/readHtmlTables";
 
@@ -182,6 +182,78 @@ describe("Format B — Сведения о работе счета", () => {
     expect(expense.direction).toBe("expense");
     expect(expense.amount).toBe(15_252);
     expect(expense.counterpartyName).toContain("ДСИ");
+  });
+});
+
+// ── STORNO VA MANFIY SUMMA ───────────────────────────────────────────────
+//
+// Faza 3.3. Bu qamrov BUTUNLAY YO'Q edi: 55 ta parser testi beshta formatni
+// tekshirardi, lekin birortasi ham bekor qilingan to'lovni sinamasdi. Bank
+// storno'ni alohida qator bilan emas, MANFIY summa bilan qaytaradi va eski
+// qoida (`credit > 0 ? credit : debit`) ikki xil yanglishardi.
+
+describe("storno va manfiy summa", () => {
+  /** `svedeniyaNoAccountLine` shaklidagi bitta tranzaksiyali vipiska. */
+  const withAmounts = (debit: number | null, credit: number | null) => [
+    svedeniyaNoAccountLine[0],
+    svedeniyaNoAccountLine[1],
+    { ...svedeniyaNoAccountLine[2], __EMPTY_3: debit, __EMPTY_4: credit },
+  ];
+
+  it("oddiy kirim — xulq o'zgarmaydi", () => {
+    const [tx] = parseStatementRows(withAmounts(null, 4_000_000)).transactions;
+    expect(tx.direction).toBe("income");
+    expect(tx.amount).toBe(4_000_000);
+  });
+
+  it("oddiy chiqim — xulq o'zgarmaydi", () => {
+    const [tx] = parseStatementRows(withAmounts(4_000_000, null)).transactions;
+    expect(tx.direction).toBe("expense");
+    expect(tx.amount).toBe(4_000_000);
+  });
+
+  it("manfiy kredit (kirim stornosi) → MUSBAT summali chiqim", () => {
+    // EDI: `credit > 0` yolg'on → "chiqim 0 so'm". Navbatda 0 so'mlik qator
+    // paydo bo'lardi, pulning o'zi esa hech qayerda hisobga olinmasdi.
+    const [tx] = parseStatementRows(withAmounts(null, -500_000)).transactions;
+    expect(tx.direction).toBe("expense");
+    expect(tx.amount).toBe(500_000);
+  });
+
+  it("manfiy debet (chiqim stornosi) → MUSBAT summali kirim", () => {
+    // EDI: "chiqim −500 000". Manfiy chiqim hisobga olinsa kassa qoldig'ini
+    // KAMAYTIRISH o'rniga oshirib yuborardi.
+    const [tx] = parseStatementRows(withAmounts(-500_000, null)).transactions;
+    expect(tx.direction).toBe("income");
+    expect(tx.amount).toBe(500_000);
+  });
+
+  it("o'zini yopgan qator (debet = kredit) yozilmaydi", () => {
+    // Hisob qoldig'i o'zgarmagan — yozib qo'yadigan pul yo'q.
+    expect(parseStatementRows(withAmounts(500_000, 500_000)).transactions).toHaveLength(0);
+  });
+
+  it("ikkala ustun ham bo'sh bo'lgan xizmat qatori yozilmaydi", () => {
+    expect(parseStatementRows(withAmounts(null, null)).transactions).toHaveLength(0);
+  });
+});
+
+describe("resolveMovement", () => {
+  it("sof harakat bo'yicha yo'nalish va musbat summa beradi", () => {
+    expect(resolveMovement(0, 100)).toEqual({ direction: "income", amount: 100 });
+    expect(resolveMovement(100, 0)).toEqual({ direction: "expense", amount: 100 });
+    expect(resolveMovement(0, -100)).toEqual({ direction: "expense", amount: 100 });
+    expect(resolveMovement(-100, 0)).toEqual({ direction: "income", amount: 100 });
+  });
+
+  it("sof harakat nol bo'lsa qator tashlanadi", () => {
+    expect(resolveMovement(0, 0)).toBeNull();
+    expect(resolveMovement(250, 250)).toBeNull();
+  });
+
+  it("qisman storno sof qoldiqni qaytaradi", () => {
+    // Bank 1 000 000 kirimning 400 000 ini qaytarib olgan.
+    expect(resolveMovement(400_000, 1_000_000)).toEqual({ direction: "income", amount: 600_000 });
   });
 });
 
@@ -457,33 +529,102 @@ describe("parsePlastik", () => {
 `;
 
   it("qavssiz JSON va null qatorlarni o'qiydi", () => {
-    const { receipts, declaredTotal } = parsePlastikFile(raw);
-    expect(receipts).toHaveLength(2);
-    expect(declaredTotal).toBe(1_000_000);
-    expect(receipts.reduce((s, r) => s + r.amount, 0)).toBe(declaredTotal);
+    const { transactions } = parsePlastikFile(raw);
+    expect(transactions).toHaveLength(2);
+    expect(transactions.reduce((s, t) => s + t.amount, 0)).toBe(1_000_000);
   });
 
   it("ustun kalitlarini sarlavhadan topadi (qattiq yozilmagan)", () => {
-    const [first] = parsePlastikFile(raw).receipts;
+    const [first] = parsePlastikFile(raw).transactions;
     expect(first.docNumber).toBe("3563");
     expect(first.amount).toBe(700_000);
     expect(first.counterpartyInn).toBe("301502362");
     expect(first.counterpartyName).toContain("ASIA PRO GROUP");
-    expect(first.date.toISOString().slice(0, 10)).toBe("2026-07-31");
+    expect(first.valueDate.toISOString().slice(0, 10)).toBe("2026-07-31");
   });
 
   it("STIRsiz mijozni ham oladi (YATT — real holat)", () => {
-    const yatt = parsePlastikFile(raw).receipts[1];
+    const yatt = parsePlastikFile(raw).transactions[1];
     expect(yatt.counterpartyInn).toBeNull();
     expect(yatt.counterpartyName).toBe("SOBIROV I YATT");
   });
 
   it("'Итого' va 'Ответственный' xizmat qatorlarini tushum deb sanamaydi", () => {
-    expect(parsePlastikFile(raw).receipts.every((r) => r.amount > 0)).toBe(true);
+    expect(parsePlastikFile(raw).transactions.every((t) => t.amount > 0)).toBe(true);
   });
 
   it("sarlavhasiz faylni JIM YUTMAYDI", () => {
     expect(() => parsePlastikFile('{ "a": 1 }')).toThrow(BankStatementParseError);
+  });
+
+  // ── UMUMIY SHARTNOMA (Faza 3.4) ────────────────────────────────────────
+  //
+  // Ilgari bu parser o'z tipini qaytarardi va dispetcherdan tashqarida
+  // turardi. Endi beshala format bitta shartnomadan o'tadi.
+
+  it("umumiy `ParsedStatement` shartnomasini qaytaradi", () => {
+    const parsed = parsePlastikFile(raw);
+    expect(parsed.format).toBe("plastik");
+    // Plastik tushumi bank hisobiga tushmaydi — hisob raqami ATAYLAB yo'q.
+    expect(parsed.accountNumber).toBeNull();
+    expect(parsed.transactions.every((t) => t.direction === "income")).toBe(true);
+    expect(parsed.periodFrom?.toISOString().slice(0, 10)).toBe("2026-07-31");
+    expect(parsed.periodTo?.toISOString().slice(0, 10)).toBe("2026-07-31");
+  });
+
+  it("dispetcher orqali ham o'qiladi (parseWorkbook)", () => {
+    const rows = JSON.parse(`[${raw.trim()}]`).filter(Boolean);
+    const parsed = parseWorkbook({ Plastik: rows });
+    expect(parsed.format).toBe("plastik");
+    expect(parsed.transactions).toHaveLength(2);
+  });
+
+  // ── CHALA FAYL ─────────────────────────────────────────────────────────
+  //
+  // Bu tekshiruv ilgari `server/bankImport.ts` da, parserdan TASHQARIDA
+  // turardi — ya'ni faqat veb yo'lida ishlardi va skript yo'li himoyasiz edi.
+  // Chala o'qilgan reestr pulning bir qismini JIM yo'qotadi.
+
+  it("'Итого' o'qilgan yig'indiga mos kelmasa TO'XTAYDI", () => {
+    const truncated = raw.replace('"Column6": 1000000 }', '"Column6": 1500000 }');
+    expect(() => parsePlastikFile(truncated)).toThrow(/Итого/);
+  });
+
+  it("chala fayl xatosi 'format tanilmadi' deb belgilanmaydi", () => {
+    const truncated = raw.replace('"Column6": 1000000 }', '"Column6": 1500000 }');
+    try {
+      parsePlastikFile(truncated);
+      expect.unreachable("parser to'xtashi kerak edi");
+    } catch (e) {
+      // `unrecognized` bo'lsa foydalanuvchiga fayl tarkibi dumpi ko'rsatiladi
+      // va aniq xabar o'sha diagnostika ostida ko'milib ketadi.
+      expect(e).toBeInstanceOf(BankStatementParseError);
+      expect((e as BankStatementParseError).unrecognized).toBe(false);
+    }
+  });
+
+  it("manfiy va nol summali qatorlarni tushum deb yozmaydi", () => {
+    // 1C reestrida storno "Сумма" ni manfiy qilib qaytaradi. Bunday qator
+    // tushum sifatida yozilsa, `allocatePlastikReceipt` mijoz qarzini
+    // KAMAYTIRISH o'rniga oshirib yuborardi.
+    const withStorno = raw.replace(
+      '{ "Plastik": "Итого", "Column6": 1000000 },',
+      `{ "Plastik": 3, "Column2": "31.07.2026", "Column5": "4001", "Column6": -250000,
+   "Column11": "STORNO", "Column17": "Без договора" },
+ { "Plastik": 4, "Column2": "31.07.2026", "Column5": "4002", "Column6": 0,
+   "Column11": "NOL", "Column17": "Без договора" },
+ { "Plastik": "Итого", "Column6": 1000000 },`
+    );
+    const { transactions } = parsePlastikFile(withStorno);
+    expect(transactions).toHaveLength(2);
+    expect(transactions.every((t) => t.amount > 0)).toBe(true);
+  });
+
+  it("hujjat raqami bo'sh bo'lsa ham idempotentlik kaliti qoladi", () => {
+    // Bo'sh kalit bilan yozilgan tushum qayta importda DUBLIKAT bo'lardi.
+    const noDoc = raw.replace('"Column5": "3563", ', "");
+    const [first] = parsePlastikFile(noDoc).transactions;
+    expect(first.docNumber).toBe("row-1");
   });
 });
 

@@ -16,6 +16,7 @@ import {
   type ParsedTransaction,
   type SheetRow,
 } from "./types";
+import { resolveMovement } from "./normalize";
 
 const COLUMN_LABELS: Record<string, keyof Columns> = {
   "№ пп": "npp",
@@ -135,16 +136,15 @@ export function parseVypiska(rows: SheetRow[]): ParsedStatement {
     const valueDate = toDay(row[cols.docDate]);
     if (!valueDate) { warnings.push(`${i + 1}-qator: sana o'qilmadi`); continue; }
 
-    const debit = amount(row[cols.debit]);
-    const credit = amount(row[cols.credit]);
-    if (debit === 0 && credit === 0) continue;
+    const movement = resolveMovement(amount(row[cols.debit]), amount(row[cols.credit]));
+    if (!movement) continue;
 
     transactions.push({
       valueDate,
       docNumber: text(row[cols.docNo]) || null,
       opCode: text(row[cols.mfo]) || null,
-      direction: credit > 0 ? "income" : "expense",
-      amount: credit > 0 ? credit : debit,
+      direction: movement.direction,
+      amount: movement.amount,
       counterpartyInn: null,
       counterpartyName: party || null,
       counterpartyAccount: text(row[cols.partyAccount]) || null,

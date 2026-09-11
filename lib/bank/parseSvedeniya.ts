@@ -14,7 +14,7 @@ import {
   type ParsedTransaction,
   type SheetRow,
 } from "./types";
-import { cleanText, extractAccount, extractInn, toAmount, toDate } from "./normalize";
+import { cleanText, extractAccount, extractInn, resolveMovement, toAmount, toDate } from "./normalize";
 
 const HEADER_MARKER = "Дата";
 const PERIOD_RE = /c\s*(\d{2}\.\d{2}\.\d{4})\s*по\s*(\d{2}\.\d{2}\.\d{4})/i;
@@ -127,9 +127,8 @@ export function parseSvedeniya(rows: SheetRow[]): ParsedStatement {
     const valueDate = toDate(row[colDate]);
     if (!valueDate) continue;
 
-    const debit = toAmount(row[colDebit]);
-    const credit = toAmount(row[colCredit]);
-    if (debit === 0 && credit === 0) continue;
+    const movement = resolveMovement(toAmount(row[colDebit]), toAmount(row[colCredit]));
+    if (!movement) continue;
 
     // "20208000805596161002/310079710/\"R A H M A T J O N-HALOL-MARKET\" MCHJ"
     const partyRaw = cleanText(row[colParty]);
@@ -154,8 +153,8 @@ export function parseSvedeniya(rows: SheetRow[]): ParsedStatement {
       valueDate,
       docNumber: cleanText(row[colDoc]),
       opCode: cleanText(row[colOp]),
-      direction: credit > 0 ? "income" : "expense",
-      amount: credit > 0 ? credit : debit,
+      direction: movement.direction,
+      amount: movement.amount,
       counterpartyInn,
       counterpartyName,
       counterpartyAccount,

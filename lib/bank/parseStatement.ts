@@ -10,9 +10,11 @@ import { isLitsevoyFormat, parseLitsevoy, readStatementHeader } from "./parseLit
 import { isSvedeniyaFormat, parseSvedeniya } from "./parseSvedeniya";
 import { isVypiskaFormat, parseVypiska } from "./parseVypiska";
 import { looksLikeHamkorbank, parseHamkorbankWorkbook } from "./parseHamkorbank";
+import { isPlastikFormat, parsePlastik } from "./parsePlastik";
 
 export * from "./types";
 export { extractContract, parseContractCell } from "./extractContract";
+export { isPlastikFormat, parsePlastik, parsePlastikFile, readLooseJsonArray } from "./parsePlastik";
 export {
   classifyExpense,
   isPostableExpense,
@@ -27,13 +29,18 @@ export function parseStatementRows(rows: SheetRow[]): ParsedStatement {
   if (!rows || rows.length === 0) {
     throw new BankStatementParseError("Faylda ma'lumot yo'q");
   }
+  // Plastik BIRINCHI: tanigichi eng tor ("Контрагент.ИНН" sarlavhasi) va bank
+  // vipiskalarida bunday ustun bo'lmaydi, ya'ni noto'g'ri tortib olmaydi.
+  if (isPlastikFormat(rows)) return parsePlastik(rows);
   if (isSvedeniyaFormat(rows)) return parseSvedeniya(rows);
   if (isLitsevoyFormat(rows)) return parseLitsevoy(rows);
   if (isVypiskaFormat(rows)) return parseVypiska(rows);
 
   throw new BankStatementParseError(
-    "Vipiska formati tanilmadi. Qo'llab-quvvatlanadigan formatlar: " +
-      '"Лицевой счет", "Выписка лицевых счетов" va "Сведения о работе счета".'
+    "Fayl formati tanilmadi. Qo'llab-quvvatlanadigan formatlar: " +
+      '"Лицевой счет", "Выписка лицевых счетов", "Сведения о работе счета" ' +
+      'va 1C "Реализация (акт, накладная)" reestri.',
+    { unrecognized: true }
   );
 }
 
@@ -46,6 +53,17 @@ export function parseStatementRows(rows: SheetRow[]): ParsedStatement {
 export function parseWorkbook(workbook: Workbook): ParsedStatement {
   const sheets = Object.entries(workbook);
   if (sheets.length === 0) throw new BankStatementParseError("Faylda sahifa yo'q");
+
+  // ── 1C "Реализация" reestri — VARAQ LOOPIDAN OLDIN ──────────────────
+  //
+  // Ataylab loopdan tashqarida va `try` SIZ. Loop ichidagi catch har qanday
+  // xatoni to'plab, keyingi varaqqa o'tadi va oxirida "hech bir sahifadan
+  // o'qib bo'lmadi" deb umumiy xato beradi. Plastik uchun bu YO'QOTISH
+  // bo'lardi: "Итого mos kelmadi" — chala fayl haqidagi ANIQ va harakatga
+  // chorlovchi xabar, u umumiy xato ostida ko'milib ketmasligi kerak.
+  for (const [, rows] of sheets) {
+    if (isPlastikFormat(rows)) return withSanityChecks(parsePlastik(rows));
+  }
 
   const errors: string[] = [];
   for (const [name, rows] of sheets) {
@@ -61,7 +79,9 @@ export function parseWorkbook(workbook: Workbook): ParsedStatement {
     // hisob raqami va davr, "Sheet2" da tranzaksiyalar. Bunday faylda hisob
     // topilmay, vipiskani hech qaysi hisobga bog'lab bo'lmasdi — shuning
     // uchun yetishmagan qismi qolgan sahifalardan to'ldiriladi.
-    if (!parsed.accountNumber || !parsed.periodFrom) {
+    // Plastik reestrida hisob raqami ATAYLAB yo'q — uni boshqa varaqlardan
+    // qidirish befoyda va noto'g'ri hisobni yopishtirib qo'yishi mumkin.
+    if (parsed.format !== "plastik" && (!parsed.accountNumber || !parsed.periodFrom)) {
       for (const [otherName, otherRows] of sheets) {
         if (otherName === name) continue;
         const header = readStatementHeader(otherRows);
@@ -81,7 +101,7 @@ export function parseWorkbook(workbook: Workbook): ParsedStatement {
     // qaytarilsa, pastdagi kitob darajasidagi parser (Hamkorbank) UMUMAN
     // ishga tushmaydi — MOLIYA AI vipiskasi aynan shu sababdan "hisob
     // raqami o'qilmadi" bo'lib, 22 ta tranzaksiya import qilinmagan edi.
-    if (parsed.transactions.length === 0 && !parsed.accountNumber) {
+    if (parsed.format !== "plastik" && parsed.transactions.length === 0 && !parsed.accountNumber) {
       errors.push(`${name}: na hisob raqami, na tranzaksiya topildi`);
       continue;
     }
@@ -119,7 +139,8 @@ export function parseWorkbook(workbook: Workbook): ParsedStatement {
   }
 
   throw new BankStatementParseError(
-    `Hech bir sahifadan vipiska o'qib bo'lmadi.\n${errors.join("\n")}`
+    `Hech bir sahifadan vipiska o'qib bo'lmadi.\n${errors.join("\n")}`,
+    { unrecognized: true }
   );
 }
 

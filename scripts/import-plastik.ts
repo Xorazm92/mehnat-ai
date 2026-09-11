@@ -32,20 +32,14 @@ async function main() {
     process.exit(1);
   }
 
-  const { receipts, declaredTotal } = parsePlastikFile(fs.readFileSync(SOURCE, "utf8"));
+  // Parser endi `ParsedStatement` qaytaradi (Faza 3.4) — beshala format bitta
+  // shartnomada. Fayldagi "Итого" bilan solishtirish PARSER ICHIDA: mos
+  // kelmasa u `BankStatementParseError` tashlaydi, ya'ni chala fayl bu yergacha
+  // yetib kelmaydi va tekshiruvni chaqiruvchi tushirib qoldira olmaydi.
+  const { transactions: receipts } = parsePlastikFile(fs.readFileSync(SOURCE, "utf8"));
   const total = receipts.reduce((s, r) => s + r.amount, 0);
 
   console.log(`O'qildi: ${receipts.length} ta tushum · ${som(total)} so'm`);
-  if (declaredTotal != null) {
-    const ok = Math.round(declaredTotal) === Math.round(total);
-    console.log(
-      `Fayldagi "Итого": ${som(declaredTotal)} so'm — ${ok ? "✓ mos keladi" : "✗ MOS KELMAYDI"}`
-    );
-    if (!ok) {
-      console.error("Yig'indi mos kelmadi — import to'xtatildi.");
-      process.exit(1);
-    }
-  }
 
   // STIR bo'yicha mijozni topamiz. STIR unikal emas, bir nechta mos kelsa
   // qo'lda hal qilinadi — pulni noto'g'ri firmaga yozish qarzni buzadi.
@@ -63,12 +57,21 @@ async function main() {
     byInn.set(c.inn, list);
   }
 
-  const matched: { receipt: (typeof receipts)[number]; companyId: string; name: string }[] = [];
+  const matched: { receipt: (typeof receipts)[number]; docNumber: string; companyId: string; name: string }[] = [];
+  const noDocNumber: typeof receipts = [];
   const noInn: typeof receipts = [];
   const notFound: typeof receipts = [];
   const ambiguous: typeof receipts = [];
 
   for (const r of receipts) {
+    // `docNumber` — `allocatePlastikReceipt` ning idempotentlik kaliti.
+    // Parser uni bo'sh qoldirmaydi (qator tartibidan zaxira kalit yasaydi),
+    // lekin kalitsiz tushumni yozish qayta ishga tushirishda DUBLIKAT hosil
+    // qilardi — shuning uchun bo'sh kalit jim to'ldirilmaydi, chetga chiqadi.
+    if (!r.docNumber) {
+      noDocNumber.push(r);
+      continue;
+    }
     if (!r.counterpartyInn) {
       noInn.push(r);
       continue;
@@ -82,7 +85,7 @@ async function main() {
       ambiguous.push(r);
       continue;
     }
-    matched.push({ receipt: r, companyId: hits[0].id, name: hits[0].name });
+    matched.push({ receipt: r, docNumber: r.docNumber, companyId: hits[0].id, name: hits[0].name });
   }
 
   const sum = (list: { amount: number }[]) => list.reduce((s, r) => s + r.amount, 0);
@@ -94,6 +97,7 @@ async function main() {
   console.log(`STIR ko'rsatilmagan        : ${noInn.length} ta · ${som(sum(noInn))} so'm`);
   console.log(`STIR bor, firma topilmadi  : ${notFound.length} ta · ${som(sum(notFound))} so'm`);
   if (ambiguous.length) console.log(`Bir STIR, ko'p firma       : ${ambiguous.length} ta`);
+  if (noDocNumber.length) console.log(`Hujjat raqami yo'q         : ${noDocNumber.length} ta · ${som(sum(noDocNumber))} so'm`);
 
   if (noInn.length + notFound.length > 0) {
     console.log(`\n📋 QO'LDA KO'RIB CHIQISH (${noInn.length + notFound.length}):`);
@@ -119,10 +123,10 @@ async function main() {
   for (const m of matched) {
     try {
       const res = await allocatePlastikReceipt(prisma, {
-        docNumber: m.receipt.docNumber,
+        docNumber: m.docNumber,
         companyId: m.companyId,
         amount: m.receipt.amount,
-        receivedAt: m.receipt.date,
+        receivedAt: m.receipt.valueDate,
         counterpartyInn: m.receipt.counterpartyInn,
       });
       posted++;

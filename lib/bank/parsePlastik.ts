@@ -15,27 +15,24 @@
 //    ("Plastik") birinchi ustun kaliti bo'lib turadi. Kalitlar QATTIQ
 //    YOZILMAYDI — sarlavha qatoridan ("Контрагент.ИНН" bor qator) topiladi,
 //    chunki eksportdan eksportga o'zgaradi.
+//
+// ── UMUMIY SHARTNOMA (Faza 3.4) ────────────────────────────────────────
+//
+// Ilgari bu parser o'z tiplarini (`ParsedPlastik` / `PlastikReceipt`)
+// qaytarardi va shu sababli dispetcherdan (`parseStatementRows`) TASHQARIDA
+// turardi: `server/bankImport.ts` faylni oldindan o'zi skanerlab, plastik
+// varag'ini topsa alohida yo'lga burardi. Beshta formatdan to'rttasi bitta
+// shartnomaga (`ParsedStatement`) bo'ysunar, bittasi esa yo'q edi.
+//
+// Endi u ham `ParsedStatement` qaytaradi va formatni dispetcher aniqlaydi.
+//
+// ⚠️ YOZISH YO'LI BARIBIR ALOHIDA va shunday qolishi KERAK: plastik tushumi
+// bank hisobiga tushmaydi, shuning uchun `BankTransaction` qatori yaratmaydi
+// va to'g'ridan-to'g'ri `allocatePlastikReceipt` orqali `PaymentAllocation`
+// yozadi. Birlashtirilgani — O'QISH shartnomasi, yozish emas.
 
-import { BankStatementParseError } from "./types";
+import { BankStatementParseError, type ParsedStatement, type ParsedTransaction, type SheetRow } from "./types";
 import { toDate } from "./normalize";
-
-export interface PlastikReceipt {
-  /** 1C hujjat raqami — takrorlanmaslik kaliti sifatida ishlatiladi. */
-  docNumber: string;
-  date: Date;
-  amount: number;
-  counterpartyName: string | null;
-  /** Ba'zi mijozlarda (YATT, jismoniy shaxs) STIR umuman yo'q. */
-  counterpartyInn: string | null;
-  /** Odatda "Без договора". */
-  contractNote: string | null;
-}
-
-export interface ParsedPlastik {
-  receipts: PlastikReceipt[];
-  /** Fayldagi "Итого" qatori — o'qilganini tekshirish uchun. */
-  declaredTotal: number | null;
-}
 
 /** Tashqi qavssiz, `null` aralashgan obyektlar ketma-ketligini o'qiydi. */
 export function readLooseJsonArray(raw: string): Record<string, unknown>[] {
@@ -76,7 +73,12 @@ export function readLooseJsonArray(raw: string): Record<string, unknown>[] {
 
 const HEADER_MARK = "Контрагент.ИНН";
 
-export function parsePlastik(rows: Record<string, unknown>[]): ParsedPlastik {
+/** Dispetcher uchun format tanigichi — sarlavhada 1C reestri belgisi bormi. */
+export function isPlastikFormat(rows: SheetRow[]): boolean {
+  return rows.some((r) => Object.values(r).some((v) => String(v ?? "").trim() === HEADER_MARK));
+}
+
+export function parsePlastik(rows: SheetRow[]): ParsedStatement {
   const headerIndex = rows.findIndex((r) =>
     Object.values(r).some((v) => String(v ?? "").trim() === HEADER_MARK)
   );
@@ -106,7 +108,7 @@ export function parsePlastik(rows: Record<string, unknown>[]): ParsedPlastik {
     throw new BankStatementParseError("Reestrda majburiy ustunlar yo'q (№ п/п, Дата, Сумма)");
   }
 
-  const receipts: PlastikReceipt[] = [];
+  const transactions: ParsedTransaction[] = [];
   let declaredTotal: number | null = null;
 
   for (const row of rows.slice(headerIndex + 1)) {
@@ -126,20 +128,52 @@ export function parsePlastik(rows: Record<string, unknown>[]): ParsedPlastik {
     if (!date || amount <= 0) continue;
 
     const innRaw = colInn ? String(row[colInn] ?? "").trim() : "";
-    receipts.push({
+    transactions.push({
+      valueDate: date,
+      // HECH QACHON null EMAS: bu qiymat `allocatePlastikReceipt` da
+      // idempotentlik kaliti bo'lib ishlatiladi, shuning uchun hujjat raqami
+      // bo'sh bo'lsa qator tartibidan zaxira kalit yasaladi.
       docNumber: String(row[colDoc] ?? "").trim() || `row-${marker}`,
-      date,
+      opCode: null,
+      direction: "income",
       amount,
-      counterpartyName: colName ? String(row[colName] ?? "").trim() || null : null,
       counterpartyInn: /^\d{9}$/.test(innRaw) ? innRaw : null,
-      contractNote: colContract ? String(row[colContract] ?? "").trim() || null : null,
+      counterpartyName: colName ? String(row[colName] ?? "").trim() || null : null,
+      counterpartyAccount: null,
+      purpose: colContract ? String(row[colContract] ?? "").trim() || null : null,
     });
   }
 
-  return { receipts, declaredTotal };
+  // ⚠️ CHALA FAYL — QATTIQ TO'XTASH, ogohlantirish emas.
+  //
+  // Ilgari bu tekshiruv `server/bankImport.ts` da, parserdan tashqarida
+  // turardi va shu sababli faqat VEB yo'lida ishlardi. Endi parserning o'zida:
+  // chala o'qilgan reestr pulning bir qismini jim yo'qotadi, shuning uchun
+  // hech bir chaqiruvchi bu tekshiruvni tushirib qoldira olmasligi kerak.
+  const total = transactions.reduce((sum, t) => sum + t.amount, 0);
+  if (declaredTotal != null && Math.round(declaredTotal) !== Math.round(total)) {
+    throw new BankStatementParseError(
+      `Yig'indi mos kelmadi: fayldagi "Итого" ${Math.round(declaredTotal).toLocaleString("en-US")}, ` +
+        `o'qilgani ${Math.round(total).toLocaleString("en-US")}. Fayl to'liq emas bo'lishi mumkin.`
+    );
+  }
+
+  const dates = transactions.map((t) => t.valueDate.getTime());
+  return {
+    format: "plastik",
+    // Plastik tushumi bank hisobiga tushmaydi — hisob raqami YO'Q.
+    accountNumber: null,
+    accountInn: null,
+    holderName: null,
+    periodFrom: dates.length > 0 ? new Date(Math.min(...dates)) : null,
+    periodTo: dates.length > 0 ? new Date(Math.max(...dates)) : null,
+    openingBalance: null,
+    closingBalance: null,
+    transactions,
+  };
 }
 
 /** Faylni to'g'ridan-to'g'ri o'qiydi (skript va server uchun bitta yo'l). */
-export function parsePlastikFile(raw: string): ParsedPlastik {
+export function parsePlastikFile(raw: string): ParsedStatement {
   return parsePlastik(readLooseJsonArray(raw));
 }

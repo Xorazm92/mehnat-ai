@@ -4,8 +4,14 @@
 // uni real fayllar bilan testda tekshirish mumkin va xuddi shu kod ham
 // veb-yuklashda, ham bir martalik backfill skriptida ishlaydi.
 
-/** Vipiska formati. Har bank o'z ko'rinishini beradi. */
-export type StatementFormat = "litsevoy" | "svedeniya" | "hamkorbank" | "vypiska";
+/**
+ * Vipiska formati. Har bank o'z ko'rinishini beradi.
+ *
+ * `plastik` — bank vipiskasi EMAS, 1C "Реализация" reestri. U ham shu
+ * shartnomadan o'tadi (Faza 3.4), lekin hisob raqami bo'lmaydi va yozish
+ * yo'li alohida: `lib/bank/parsePlastik.ts` boshidagi izohga qarang.
+ */
+export type StatementFormat = "litsevoy" | "svedeniya" | "hamkorbank" | "vypiska" | "plastik";
 
 /** Xom jadval: sahifa nomi → qatorlar (xlsx `sheet_to_json` natijasi). */
 export type SheetRow = Record<string, unknown>;
@@ -83,8 +89,16 @@ export interface StatementPreview {
 
 /** Parser tanimagan fayl — jim yutilmaydi, aniq xato beriladi. */
 export class BankStatementParseError extends Error {
-  constructor(message: string) {
+  /**
+   * `true` — format UMUMAN tanilmadi (qaysi parser kerakligi noma'lum).
+   * Faqat shunda foydalanuvchiga fayl tarkibi dumpi ko'rsatiladi; tanilgan
+   * formatdagi aniq xato ("Итого mos kelmadi") dump bilan ko'milib ketmasin.
+   */
+  readonly unrecognized: boolean;
+
+  constructor(message: string, options?: { unrecognized?: boolean }) {
     super(message);
     this.name = "BankStatementParseError";
+    this.unrecognized = options?.unrecognized ?? false;
   }
 }

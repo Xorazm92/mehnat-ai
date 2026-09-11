@@ -115,3 +115,43 @@ export function extractMfo(value: unknown): string | null {
   const m = /МФО\s*:?\s*(\d{5})/i.exec(String(value));
   return m ? m[1] : null;
 }
+
+/**
+ * Debet/kredit juftligidan pul harakatini aniqlaydi.
+ *
+ * NEGA ALOHIDA FUNKSIYA: to'rttala bank parseri (litsevoy, svedeniya,
+ * vypiska, hamkorbank) aynan bir xil uch qatorni nusxalagan edi —
+ *
+ *     if (debit === 0 && credit === 0) continue;
+ *     direction: credit > 0 ? "income" : "expense",
+ *     amount:    credit > 0 ? credit : debit,
+ *
+ * — va u STORNO'da buzilardi. Bank bekor qilingan operatsiyani alohida qator
+ * bilan emas, MANFIY summa bilan qaytaradi va yuqoridagi qoida ikki xil
+ * yanglishardi:
+ *
+ *   • kredit −500 000, debet 0  → `credit > 0` yolg'on bo'lib, qator
+ *     "chiqim 0 so'm" bo'lib yozilardi (navbatda 0 so'mlik qator paydo
+ *     bo'lardi, pul esa hech qayerda hisobga olinmasdi);
+ *   • debet −500 000, kredit 0  → "chiqim −500 000" bo'lib yozilardi va
+ *     MANFIY chiqim hisobga olinsa kassa qoldig'ini OSHIRIB yuborardi.
+ *
+ * To'g'ri qoida sof harakatga (`kredit − debet`) qaraydi va u oddiy
+ * qatorlarda avvalgi natijani aynan takrorlaydi:
+ *
+ *   kredit 100, debet 0   → +100 → kirim 100    (o'zgarmadi)
+ *   kredit 0,   debet 100 → −100 → chiqim 100   (o'zgarmadi)
+ *   kredit −100, debet 0  → −100 → chiqim 100   (edi: chiqim 0)
+ *   kredit 0,   debet −100 → +100 → kirim 100   (edi: chiqim −100)
+ *
+ * Sof harakat NOL bo'lsa qator tashlanadi: hisob qoldig'i o'zgarmagan, ya'ni
+ * yozib qo'yadigan pul yo'q.
+ */
+export function resolveMovement(
+  debit: number,
+  credit: number
+): { direction: "income" | "expense"; amount: number } | null {
+  const net = credit - debit;
+  if (net === 0) return null;
+  return { direction: net > 0 ? "income" : "expense", amount: Math.abs(net) };
+}

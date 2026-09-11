@@ -15,7 +15,7 @@ import {
   type SheetRow,
   type Workbook,
 } from "./types";
-import { cleanText, extractAccount, extractInn, toAmount, toDate } from "./normalize";
+import { cleanText, extractAccount, extractInn, resolveMovement, toAmount, toDate } from "./normalize";
 
 const PERIOD_RE =
   // "c" bu yerda ba'zan LOTIN (Hamkorbank shunday yozadi) — ikkala alifbo.
@@ -145,9 +145,11 @@ export function parseHamkorbankWorkbook(workbook: Workbook): ParsedStatement {
     const valueDate = toDate(dateText.slice(0, 10));
     if (!valueDate) continue;
 
-    const credit = toAmount(keys.credit ? row[keys.credit] : null);
-    const debit = toAmount(keys.debit ? row[keys.debit] : null);
-    if (credit === 0 && debit === 0) continue;
+    const movement = resolveMovement(
+      toAmount(keys.debit ? row[keys.debit] : null),
+      toAmount(keys.credit ? row[keys.credit] : null)
+    );
+    if (!movement) continue;
 
     // "20208000805091385002/306510745/RAHMATJON OTA BUSINESS"
     const partyRaw = cleanText(row[keys.party]);
@@ -162,8 +164,8 @@ export function parseHamkorbankWorkbook(workbook: Workbook): ParsedStatement {
       valueDate,
       docNumber: cleanText(keys.doc ? row[keys.doc] : null),
       opCode: cleanText(keys.op ? row[keys.op] : null),
-      direction: credit > 0 ? "income" : "expense",
-      amount: credit > 0 ? credit : debit,
+      direction: movement.direction,
+      amount: movement.amount,
       counterpartyInn: partyInn && /^\d{9}$/.test(partyInn) ? partyInn : null,
       counterpartyName,
       counterpartyAccount: partyAccount && /^\d{10,}$/.test(partyAccount) ? partyAccount : null,

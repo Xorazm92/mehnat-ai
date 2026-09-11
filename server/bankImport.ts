@@ -21,7 +21,6 @@ import { assertPeriodOpen } from "@/lib/periodLock";
 import { recordKassaMovement, runCashTx } from "@/lib/cashGate";
 import { ACCOUNTS } from "@/lib/ledger";
 import { parseWorkbook, transactionHash } from "@/lib/bank/parseStatement";
-import { parsePlastik } from "@/lib/bank/parsePlastik";
 import { readWorkbook } from "@/lib/bank/readWorkbook";
 import { extractContract } from "@/lib/bank/extractContract";
 import { EXPENSE_CATEGORY_LABELS, isPostableExpense, type ExpenseCategory } from "@/lib/bank/classifyExpense";
@@ -40,6 +39,7 @@ import {
 } from "@/lib/bank/importStatement";
 import { assertFundingSource } from "@/server/fundingSources";
 import { Prisma } from "@prisma/client";
+import { BankStatementParseError } from "@/lib/bank/types";
 import type { ParsedStatement, StatementPreview, Workbook } from "@/lib/bank/types";
 
 // ─────────────────────────────────────────────────────────
@@ -442,15 +442,6 @@ function describeWorkbook(workbook: Workbook): string {
 }
 
 /** Fayl 1C "Реализация" reestrimi (plastik) — vipiska emasmi. */
-function findPlastikSheet(workbook: Workbook) {
-  for (const rows of Object.values(workbook)) {
-    if (rows.some((r) => Object.values(r).some((v) => String(v ?? "").trim() === "Контрагент.ИНН"))) {
-      return rows;
-    }
-  }
-  return null;
-}
-
 async function resolveAccount(parsed: ParsedStatement) {
   if (!parsed.accountNumber) return null;
   return prisma.bankAccount.findUnique({
@@ -479,55 +470,15 @@ export async function previewStatement(formData: FormData): Promise<UploadOutcom
     return { ok: false, error: `Faylni ochib bo'lmadi: ${(e as Error).message}` };
   }
 
-  // 1C reestri (plastik) — bank vipiskasi emas, boshqa yo'l bilan o'qiladi.
-  const plastikRows = findPlastikSheet(workbook);
-  if (plastikRows) {
-    try {
-      const { receipts, declaredTotal } = parsePlastik(plastikRows);
-      const total = receipts.reduce((sum, r) => sum + r.amount, 0);
-      if (declaredTotal != null && Math.round(declaredTotal) !== Math.round(total)) {
-        return {
-          ok: false,
-          error:
-            `Yig'indi mos kelmadi: fayldagi "Итого" ${Math.round(declaredTotal).toLocaleString("en-US")}, ` +
-            `o'qilgani ${Math.round(total).toLocaleString("en-US")}. Fayl to'liq emas bo'lishi mumkin.`,
-        };
-      }
-      return {
-        ok: true,
-        data: {
-          format: "plastik",
-          accountNumber: null,
-          accountLabel: "Plastik karta (1C reestri)",
-          accountId: null,
-          periodFrom: receipts[0]?.date.toISOString() ?? null,
-          periodTo: receipts[receipts.length - 1]?.date.toISOString() ?? null,
-          incomeCount: receipts.length,
-          incomeSum: total,
-          expenseCount: 0,
-          expenseSum: 0,
-          duplicateCount: 0,
-          unknownAccount: false,
-          sample: receipts.slice(0, 40).map((r) => ({
-            valueDate: r.date.toISOString(),
-            docNumber: r.docNumber,
-            direction: "income",
-            amount: r.amount,
-            counterpartyName: r.counterpartyName,
-            counterpartyInn: r.counterpartyInn,
-            contractHint: null,
-          })),
-        },
-      };
-    } catch (e) {
-      return { ok: false, error: (e as Error).message };
-    }
-  }
-
   let parsed: ParsedStatement;
   try {
     parsed = parseWorkbook(workbook);
   } catch (e) {
+    // Fayl tarkibi dumpi FAQAT format umuman tanilmaganda beriladi. Tanilgan
+    // formatdagi aniq xato ("Итого mos kelmadi") o'z holicha ko'rsatiladi —
+    // aks holda harakatga chorlovchi xabar diagnostika matni ostida qoladi.
+    const unrecognized = e instanceof BankStatementParseError ? e.unrecognized : true;
+    if (!unrecognized) return { ok: false, error: (e as Error).message };
     return {
       ok: false,
       error:
@@ -535,6 +486,38 @@ export async function previewStatement(formData: FormData): Promise<UploadOutcom
         `Kutilgani — bank vipiskasi ("Лицевой счет" yoki "Сведения о работе счета") ` +
         `yoki 1C "Реализация" reestri.\n\n` +
         `FAYL TARKIBI (shu matnni ishlab chiquvchiga yuboring):\n${describeWorkbook(workbook)}`,
+    };
+  }
+
+  // 1C reestri (plastik) — o'qish shartnomasi umumiy, lekin ko'rsatish yo'li
+  // alohida: hisob raqami yo'q va dublikat qalqoni `BankTransaction` hash'iga
+  // tayanadi, plastik esa `BankTransaction` yaratmaydi.
+  if (parsed.format === "plastik") {
+    return {
+      ok: true,
+      data: {
+        format: "plastik",
+        accountNumber: null,
+        accountLabel: "Plastik karta (1C reestri)",
+        accountId: null,
+        periodFrom: parsed.periodFrom?.toISOString() ?? null,
+        periodTo: parsed.periodTo?.toISOString() ?? null,
+        incomeCount: parsed.transactions.length,
+        incomeSum: parsed.transactions.reduce((sum, t) => sum + t.amount, 0),
+        expenseCount: 0,
+        expenseSum: 0,
+        duplicateCount: 0,
+        unknownAccount: false,
+        sample: parsed.transactions.slice(0, 40).map((t) => ({
+          valueDate: t.valueDate.toISOString(),
+          docNumber: t.docNumber,
+          direction: "income",
+          amount: t.amount,
+          counterpartyName: t.counterpartyName,
+          counterpartyInn: t.counterpartyInn,
+          contractHint: null,
+        })),
+      },
     };
   }
 
@@ -624,16 +607,20 @@ export async function commitStatementUpload(
     return { ok: false, error: `Faylni ochib bo'lmadi: ${(e as Error).message}` };
   }
 
-  // ── 1C reestri (plastik karta tushumlari) ────────────────────────────
-  const plastikRows = findPlastikSheet(workbook);
-  if (plastikRows) {
-    let receipts;
-    try {
-      ({ receipts } = parsePlastik(plastikRows));
-    } catch (e) {
-      return { ok: false, error: (e as Error).message };
-    }
+  let parsed: ParsedStatement;
+  try {
+    parsed = parseWorkbook(workbook);
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
 
+  // ── 1C reestri (plastik karta tushumlari) ────────────────────────────
+  //
+  // O'qish shartnomasi umumiy (`ParsedStatement`), YOZISH yo'li alohida:
+  // plastik tushumi bank hisobiga tushmaydi, `BankTransaction` yaratmaydi va
+  // to'g'ridan-to'g'ri `PaymentAllocation` yozadi.
+  if (parsed.format === "plastik") {
+    const receipts = parsed.transactions;
     const inns = Array.from(
       new Set(receipts.map((r) => r.counterpartyInn).filter((v): v is string => !!v))
     );
@@ -658,11 +645,19 @@ export async function commitStatementUpload(
         skipped++;
         continue;
       }
+      // `docNumber` — `allocatePlastikReceipt` ning idempotentlik kaliti.
+      // Parser uni hech qachon bo'sh qoldirmaydi (qator tartibidan zaxira
+      // kalit yasaydi), lekin kalitsiz qatorni JIM yozish qayta yuklashda
+      // dublikat tushum hosil qilardi — shuning uchun aniq to'sib qo'yiladi.
+      if (!r.docNumber) {
+        skipped++;
+        continue;
+      }
       await allocatePlastikReceipt(prisma, {
         docNumber: r.docNumber,
         companyId: hits[0].id,
         amount: r.amount,
-        receivedAt: r.date,
+        receivedAt: r.valueDate,
         counterpartyInn: r.counterpartyInn,
         createdBy: userId,
       });
@@ -696,13 +691,6 @@ export async function commitStatementUpload(
   }
 
   // ── Bank vipiskasi ───────────────────────────────────────────────────
-  let parsed: ParsedStatement;
-  try {
-    parsed = parseWorkbook(workbook);
-  } catch (e) {
-    return { ok: false, error: (e as Error).message };
-  }
-
   const account = await resolveAccount(parsed);
   if (!account) {
     return {
