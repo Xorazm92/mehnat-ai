@@ -67,19 +67,37 @@ const COL = {
 } as const;
 
 /**
- * Excel ustuni → `ContractAssignment.role`.
+ * Excel ustuni → ASRO'dagi biriktiruv(lar).
  *
  * `chief_accountant` bu yerda YO'Q: Excel'da "Ёркиной" ustuni ism emas, SUMMA
  * (7%) — bosh buxgalter hamma firmada bitta odam, shuning uchun ustunga ism
  * yozilmagan. Uni ism bo'yicha solishtirib bo'lmaydi, faqat summasini.
+ *
+ * ⚠️ ROL NOMI BITTA EMAS — bu skript birinchi yozilganda AYNAN SHU YERDA
+ * xato qilingandi. "Назоратчи" uchun faqat `supervisor` qidirilgandi, chunki
+ * LOKAL bazada shunday edi (209 ta `supervisor`, 3 ta `controller`). PRODDA
+ * esa TESKARI: 198 ta `controller`, 24 ta `supervisor`. Natijada audit 166 ta
+ * firmada "nazoratchi biriktirilmagan" deb SOXTA ogohlantirish berdi —
+ * biriktiruvlar joyida turgan holda.
+ *
+ * Shuning uchun har ustun ro'yxat qabul qiladi va `Company` ning o'z SLOTI
+ * ham hisobga olinadi: biriktiruv uch joyda yashaydi (slot, `ContractAssignment`,
+ * majburiyat kesimi) va ularning birortasida bo'lsa — biriktirilgan sanaladi.
  */
-const ROLE_BY_COLUMN = {
+const ROLES_BY_COLUMN = {
+  accountant: ["accountant"],
+  bankClient: ["bank_manager"],
+  supervisor: ["controller", "supervisor"],
+} as const;
+
+/** Excel ustuni → `Company` dagi mos slot maydoni. */
+const SLOT_BY_COLUMN = {
   accountant: "accountant",
-  bankClient: "bank_manager",
+  bankClient: "bankClient",
   supervisor: "supervisor",
 } as const;
 
-type ExcelRoleKey = keyof typeof ROLE_BY_COLUMN;
+type ExcelRoleKey = keyof typeof ROLES_BY_COLUMN;
 
 // ---------- normallashtirish ----------
 
@@ -210,6 +228,10 @@ async function loadCompanies() {
       inn: true,
       isActive: true,
       isOwnFirm: true,
+      // Biriktiruv UCH JOYDA yashaydi; slot ham hisobga olinadi.
+      accountant: { select: { fullName: true } },
+      bankClient: { select: { fullName: true } },
+      supervisor: { select: { fullName: true } },
       contractAmount: true,
       createdAt: true,
       contractAssignments: {
@@ -225,9 +247,20 @@ async function loadCompanies() {
   });
 }
 
-/** Firmaga biriktirilgan odam(lar)ning ismi, rol bo'yicha. */
-function assignedNames(c: DbCompany, role: string): string[] {
-  return c.contractAssignments.filter((a) => a.role === role).map((a) => a.user.fullName);
+/**
+ * Firmaga biriktirilgan odam(lar)ning ismi.
+ *
+ * IKKALA MANBA ham o'qiladi: `ContractAssignment` qatorlari VA `Company` ning
+ * o'z sloti. Ular bir-birini almashtirmaydi — prodda ba'zi firmada faqat slot
+ * to'ldirilgan, boshqasida faqat biriktiruv qatori bor.
+ */
+function assignedNames(c: DbCompany, key: ExcelRoleKey): string[] {
+  const roles = ROLES_BY_COLUMN[key] as readonly string[];
+  const fromAssignments = c.contractAssignments
+    .filter((a) => roles.includes(a.role))
+    .map((a) => a.user.fullName);
+  const slot = c[SLOT_BY_COLUMN[key]]?.fullName;
+  return slot ? [...new Set([...fromAssignments, slot])] : fromAssignments;
 }
 
 // ---------- solishtirish ----------
@@ -336,10 +369,10 @@ function compare(excel: ExcelRow[], companies: DbCompany[], file: string): Repor
     }
 
     const problems: string[] = [];
-    for (const key of Object.keys(ROLE_BY_COLUMN) as ExcelRoleKey[]) {
-      const role = ROLE_BY_COLUMN[key];
+    for (const key of Object.keys(ROLES_BY_COLUMN) as ExcelRoleKey[]) {
+      const role = key;
       const excelName = row.people[key].trim();
-      const dbNames = assignedNames(c, role);
+      const dbNames = assignedNames(c, key);
       if (!excelName && dbNames.length === 0) continue;
       if (!excelName) {
         problems.push(`${role}: Excel bo'sh, ASRO "${dbNames.join(", ")}"`);
