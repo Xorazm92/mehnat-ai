@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { currentUserViews } from "@/server/rbac";
 import { getBankAccountsOverview, getUnmatchedIncome } from "@/server/bankImport";
 import { getAvailableBalance, getDayMovement, getMonthBreakdown } from "@/lib/balance";
+import { getUnallocatedVsDebt } from "@/server/debt";
 import { prisma } from "@/lib/prisma";
 import KirimKassaClient from "./KirimKassaClient";
 import { readTabParam } from "@/lib/tabs";
@@ -43,12 +44,18 @@ export default async function KirimKassaPage({
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  const [accounts, unmatched, dayMovement, monthBreakdown, balance] = await Promise.all([
+  // 1C kesimi bo'yicha to'lagan, lekin ASROda taqsimlanmagan firmalar —
+  // navbat yorlig'ining ikkinchi qismi. Kesim topilmasa bo'sh qaytadi, ya'ni
+  // sahifa baribir ochiladi (1C fayli yuklanmagan bo'lishi ham mumkin).
+  const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  const [accounts, unmatched, dayMovement, monthBreakdown, balance, unallocated] = await Promise.all([
     getBankAccountsOverview(),
     getUnmatchedIncome(),
     getDayMovement(today),
     getMonthBreakdown(now.getFullYear(), now.getMonth() + 1),
     getAvailableBalance(),
+    getUnallocatedVsDebt(period),
   ]);
 
   // Mijozlar ro'yxati — moslashtirilmagan tranzaksiyani qo'lda bog'lash uchun.
@@ -68,6 +75,8 @@ export default async function KirimKassaPage({
       <KirimKassaClient
         accounts={JSON.parse(JSON.stringify(accounts))}
         unmatched={JSON.parse(JSON.stringify(unmatched))}
+        unallocated={JSON.parse(JSON.stringify(unallocated))}
+        period={period}
         companies={JSON.parse(JSON.stringify(companies))}
         kpi={{
           todayIncome: dayMovement.income,

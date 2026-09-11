@@ -855,3 +855,106 @@ export async function getDebtStatement(input?: {
     hasPayments: totals.paid > 0,
   });
 }
+
+// ── 1C BO'YICHA TO'LAGAN, ASRODA TAQSIMLANMAGAN (Faza 3.5) ──────────────
+//
+// Ikki haqiqat yonma-yon:
+//   1C   — kesimlar farqidan chiqarilgan "shu oyda tushgan pul" (`collected`)
+//   ASRO — o'sha oydagi `PaymentAllocation` yig'indisi
+//
+// Farq ikki xil sababdan chiqadi va ikkalasi ham harakat talab qiladi:
+// to'lov vipiskaga tushgan-u navbatda bog'lanmay qolgan, YOKI umuman
+// import qilinmagan. Bu ro'yxatsiz farq faqat umumiy raqamda ko'rinardi
+// ("qamrov 62,8%") va qaysi firma ekani noma'lum qolardi.
+//
+// YANGI EKRAN EMAS: `/kassa/kirim?tab=navbat` ostidagi jadval.
+
+export interface UnallocatedIncomeRow {
+  companyId: string;
+  companyName: string;
+  inn: string;
+  /** 1C kesimlaridan chiqarilgan — shu oyda firma to'lagan pul. */
+  collected: number;
+  /** ASROda shu davrga taqsimlangan (`PaymentAllocation`) yig'indisi. */
+  allocated: number;
+  /** `collected − allocated` — har doim musbat (faqat kamomad ko'rsatiladi). */
+  gap: number;
+}
+
+export interface UnallocatedIncomeReport {
+  /** Qaysi 1C kesimlari ishlatilgani — ekranda ko'rsatiladi, taxmin qolmasin. */
+  asOf: string | null;
+  openingAsOf: string | null;
+  rows: UnallocatedIncomeRow[];
+  totalGap: number;
+}
+
+/**
+ * MAYDA FARQ CHEGARASI.
+ *
+ * 1C kesimi butun so'mgacha yaxlitlangan, ASRO esa tiyin bilan ishlaydi;
+ * bundan tashqari `collected` ikki kesim AYIRMASIDAN chiqariladi, ya'ni
+ * har ikkalasining yaxlitlash xatosi qo'shiladi. Chegarasiz ro'yxat bir
+ * necha yuz so'mlik "kamomad" bilan to'lib ketardi va haqiqiy bo'shliqlar
+ * ular orasida ko'rinmay qolardi.
+ */
+const GAP_THRESHOLD = 1000;
+
+export async function getUnallocatedVsDebt(period: string): Promise<UnallocatedIncomeReport> {
+  // `getPeriodDebtByCompany` o'zi `auth()` va biriktiruv doirasini qo'llaydi —
+  // bu yerda takrorlanmaydi, aks holda ikki xil doira paydo bo'lardi.
+  const snapshot = await getPeriodDebtByCompany(period);
+
+  const companyIds = Object.entries(snapshot.byCompany)
+    .filter(([, v]) => (v.collected ?? 0) > 0)
+    .map(([id]) => id);
+  if (companyIds.length === 0) {
+    return { asOf: snapshot.asOf, openingAsOf: snapshot.openingAsOf, rows: [], totalGap: 0 };
+  }
+
+  const [companies, payments] = await Promise.all([
+    prisma.company.findMany({
+      where: { id: { in: companyIds } },
+      select: { id: true, name: true, inn: true },
+    }),
+    // Soft-delete qilingan to'lov hisobga OLINMAYDI: u bekor qilingan, ya'ni
+    // pul taqsimlanmagan holatga qaytgan.
+    prisma.payment.findMany({
+      where: { period, deletedAt: null, companyId: { in: companyIds } },
+      select: { companyId: true, allocations: { select: { amount: true } } },
+    }),
+  ]);
+
+  const allocatedBy = new Map<string, number>();
+  for (const p of payments) {
+    const sum = p.allocations.reduce((s, a) => s + Number(a.amount), 0);
+    allocatedBy.set(p.companyId, (allocatedBy.get(p.companyId) ?? 0) + sum);
+  }
+  const nameBy = new Map(companies.map((c) => [c.id, c]));
+
+  const rows: UnallocatedIncomeRow[] = [];
+  for (const id of companyIds) {
+    const company = nameBy.get(id);
+    if (!company) continue; // doiradan tashqaridagi firma — ko'rsatilmaydi
+    const collected = snapshot.byCompany[id].collected ?? 0;
+    const allocated = allocatedBy.get(id) ?? 0;
+    const gap = collected - allocated;
+    if (gap < GAP_THRESHOLD) continue;
+    rows.push({
+      companyId: id,
+      companyName: company.name,
+      inn: company.inn,
+      collected,
+      allocated,
+      gap,
+    });
+  }
+  rows.sort((a, b) => b.gap - a.gap);
+
+  return {
+    asOf: snapshot.asOf,
+    openingAsOf: snapshot.openingAsOf,
+    rows,
+    totalGap: rows.reduce((s, r) => s + r.gap, 0),
+  };
+}

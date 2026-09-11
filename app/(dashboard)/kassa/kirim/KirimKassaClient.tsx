@@ -26,6 +26,7 @@ import {
   postExpenseFromBankTransaction,
 } from "@/server/bankImport";
 import type { StatementPreview } from "@/lib/bank/types";
+import type { UnallocatedIncomeReport } from "@/server/debt";
 import FundingSourceSelect from "@/components/ui/FundingSourceSelect";
 import { getServiceTermInfo } from "@/server/companies";
 import IncomeRegister from "./IncomeRegister";
@@ -86,6 +87,15 @@ interface Props {
    * to'plam ham bir xil kartochka bo'lgani uchun raqamlar ziddek ko'rinardi.
    */
   kpi: { todayIncome: number; monthIncome: number; balance: number };
+  /**
+   * 1C kesimi bo'yicha to'lagan, lekin ASROda taqsimlanmagan firmalar.
+   * Navbat yorlig'ining ikkinchi qismi: yuqoridagi ro'yxat "vipiskada bor,
+   * firmasi noma'lum", bu esa teskarisi — "firma to'lagani ma'lum, pul
+   * ASROda yo'q".
+   */
+  unallocated: UnallocatedIncomeReport;
+  /** Qaysi oy ko'rsatilayotgani (YYYY-MM) — sarlavhada aytiladi. */
+  period: string;
   /** `?tab=` dan SERVERDA o'qilgan boshlang'ich yorliq (hidratsiya uchun). */
   initialTab?: KirimTab;
 }
@@ -142,7 +152,7 @@ function FormSection({ title, children }: { title: string; children: React.React
   );
 }
 
-export default function KirimKassaClient({ accounts, unmatched, companies, kpi, initialTab = "reyestr" }: Props) {
+export default function KirimKassaClient({ accounts, unmatched, companies, kpi, unallocated, period, initialTab = "reyestr" }: Props) {
   const router = useRouter();
 
   // TABLAR. Sahifada 10 ta firma kartochkasi, 133 qatorli reyestr va
@@ -1000,7 +1010,102 @@ export default function KirimKassaClient({ accounts, unmatched, companies, kpi, 
           </div>
         )}
       </div>
+
+      <UnallocatedVsDebt report={unallocated} period={period} />
       </>)}
+    </div>
+  );
+}
+
+/**
+ * 1C BO'YICHA TO'LAGAN, ASRODA TAQSIMLANMAGAN.
+ *
+ * Yuqoridagi navbat bilan TESKARI tomondan qaraydi va shu sababli aynan shu
+ * yorliqda turadi:
+ *
+ *   yuqorida — pul ASROda bor, QAYSI FIRMA ekani noma'lum
+ *   bu yerda  — firma to'lagani 1C kesimidan ma'lum, PUL ASROda yo'q
+ *
+ * Faqat KO'RSATADI, tuzatmaydi: bo'shliqning sababi har xil (vipiska
+ * yuklanmagan, boshqa hisobga tushgan, plastik reestri kelmagan) va uni
+ * avtomatik yopish pulni o'ylab topish bo'lardi.
+ */
+function UnallocatedVsDebt({ report, period }: { report: UnallocatedIncomeReport; period: string }) {
+  const columns: DataColumn<UnallocatedIncomeReport["rows"][number]>[] = [
+    {
+      key: "company",
+      header: "Firma",
+      cell: (r) => (
+        <div className="min-w-0">
+          <div className="truncate" style={{ color: "var(--text)" }}>{r.companyName}</div>
+          <div className="text-micro tabular-nums" style={{ color: "var(--text-muted)" }}>{r.inn}</div>
+        </div>
+      ),
+      sortValue: (r) => r.companyName,
+      sticky: true,
+    },
+    {
+      key: "collected",
+      header: "1C bo'yicha to'lagan",
+      cell: (r) => <Money value={r.collected} />,
+      sortValue: (r) => r.collected,
+      numeric: true,
+    },
+    {
+      key: "allocated",
+      header: "ASROda taqsimlangan",
+      cell: (r) => <Money value={r.allocated} dashIfZero />,
+      sortValue: (r) => r.allocated,
+      numeric: true,
+    },
+    {
+      key: "gap",
+      header: "Yetishmaydi",
+      cell: (r) => <Money value={r.gap} tone="out" bold />,
+      sortValue: (r) => r.gap,
+      numeric: true,
+    },
+  ];
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-baseline justify-between gap-3 flex-wrap">
+        <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
+          1C bo'yicha to'lagan, ASROda taqsimlanmagan ({report.rows.length})
+        </h2>
+        {report.totalGap > 0 && (
+          <div className="text-meta" style={{ color: "var(--text-secondary)" }}>
+            Jami yetishmaydi: <Money value={report.totalGap} tone="out" unit bold />
+          </div>
+        )}
+      </div>
+
+      {/* Qaysi kesimlar solishtirilgani AYTILADI — aks holda raqam qayerdan
+          kelgani noma'lum bo'lib, ishonch yo'qoladi. */}
+      <p className="text-meta" style={{ color: "var(--text-muted)" }}>
+        {period} · 1C kesimlari:{" "}
+        {report.openingAsOf ? formatUzDate(report.openingAsOf) : "—"} →{" "}
+        {report.asOf ? formatUzDate(report.asOf) : "—"}
+      </p>
+
+      <DataTable
+        rows={report.rows}
+        columns={columns}
+        rowKey={(r) => r.companyId}
+        caption="1C bo'yicha to'lagan, ASROda taqsimlanmagan firmalar"
+        density="compact"
+        emptyIcon={<Inbox size={28} />}
+        emptyTitle={
+          report.asOf
+            ? "Bo'shliq yo'q"
+            : "1C kesimi topilmadi"
+        }
+        emptyDescription={
+          report.asOf
+            ? "1C kesimi bo'yicha to'langan pulning hammasi ASROda taqsimlangan."
+            : "Bu oy uchun qarzdorlik kesimi yuklanmagan — solishtirish uchun manba yo'q."
+        }
+      />
     </div>
   );
 }
