@@ -342,7 +342,7 @@ export async function runReconciliation(db: Db): Promise<ReconCheck[]> {
   //
   // Aynan shu ko'r nuqta ~1.4 mlrd so'mlik tafovutni yashirib turgan edi:
   // UI orqali kirgan yozuvlar postLedger chaqiradi, import va skript yo'llari
-  // (server/bankImport.ts, scripts/import-kassa-data.ts, lib/transit.ts) esa
+  // (server/bank/post.ts, scripts/import-kassa-data.ts, lib/transit.ts) esa
   // to'g'ridan-to'g'ri `create` qiladi va jurnalga hech narsa yozmaydi.
   //
   // Bu yerda TESKARI yo'nalish tekshiriladi: MANBA → JURNAL. Hech narsa

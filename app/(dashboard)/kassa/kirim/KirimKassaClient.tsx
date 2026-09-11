@@ -16,15 +16,14 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { MoneyField } from "@/components/ui/MoneyField";
+import { previewStatement, commitStatementUpload } from "@/server/bank/upload";
 import {
-  previewStatement,
-  commitStatementUpload,
   matchAndPostTransaction,
   ignoreTransaction,
   recordManualReceipt,
   checkDuplicateReceipt,
   postExpenseFromBankTransaction,
-} from "@/server/bankImport";
+} from "@/server/bank/post";
 import type { StatementPreview } from "@/lib/bank/types";
 import type { UnallocatedIncomeReport } from "@/server/debt";
 import FundingSourceSelect from "@/components/ui/FundingSourceSelect";

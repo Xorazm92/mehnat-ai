@@ -11,7 +11,7 @@
 //             korxonada, faqat boshqa cho'ntakda. `TransitEntry(in)`.
 //   ichki   — o'z firmalarimiz orasidagi harakat. Umuman xarajat emas.
 //
-// NEGA ALOHIDA MODUL: `server/bankImport.ts` "use server" fayli — undagi
+// NEGA ALOHIDA MODUL: `server/bank/read.ts` "use server" fayli — undagi
 // funksiyalar test ichida chaqirib bo'lmaydi (`auth()` so'rov konteksti
 // talab qiladi). Repozitoriyaning o'z uslubi shu: qaror `lib/` da, auth
 // o'ramchisi `server/` da (`test/bank-import.test.ts` ham `lib/bank/` ni

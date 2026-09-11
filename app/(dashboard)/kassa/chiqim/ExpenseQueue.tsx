@@ -33,7 +33,7 @@ import {
   ignoreExpenseTransaction,
   postSalaryFromTransaction,
   postOylikBulk,
-} from "@/server/bankImport";
+} from "@/server/bank/post";
 import { friendlyError } from "@/lib/actionError";
 
 type GroupKey = "xarajat" | "karta" | "ichki";

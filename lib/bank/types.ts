@@ -56,7 +56,7 @@ export interface ParsedStatement {
 /**
  * Yuklashdan OLDIN ko'rsatiladigan xulosa.
  *
- * ATAYIN shu yerda, `server/bankImport.ts` da emas: "use server" fayllardan
+ * ATAYIN shu yerda, `server/bank/upload.ts` da emas: "use server" fayllardan
  * faqat async funksiya eksport qilinishi mumkin.
  */
 export interface StatementPreview {

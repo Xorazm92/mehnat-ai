@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { currentUserViews } from "@/server/rbac";
-import { getBankAccountsOverview, getUnmatchedIncome } from "@/server/bankImport";
+import { getBankAccountsOverview, getUnmatchedIncome } from "@/server/bank/read";
 import { getAvailableBalance, getDayMovement, getMonthBreakdown } from "@/lib/balance";
 import { getUnallocatedVsDebt } from "@/server/debt";
 import { prisma } from "@/lib/prisma";

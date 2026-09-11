@@ -26,7 +26,7 @@ vi.mock("next/cache", () => ({ revalidateTag: () => {}, revalidatePath: () => {}
 const { prisma } = await import("@/lib/prisma");
 const { ACCOUNTS, reverseLedger, getLedgerCashBalance, postLedger } = await import("@/lib/ledger");
 const { applyAllocation } = await import("@/lib/bank/importStatement");
-const { recordManualReceipt } = await import("@/server/bankImport");
+const { recordManualReceipt } = await import("@/server/bank/post");
 const { getAvailableBalance } = await import("@/lib/balance");
 const { periodKeyOf } = await import("@/lib/periods");
 const { computeCloseFigures } = await import("@/lib/monthClose");

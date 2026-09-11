@@ -6,7 +6,7 @@
 // `postLedger` chaqirardi, import va skript yo'llari esa to'g'ridan-to'g'ri
 // `prisma.kassaEntry.create` qilardi:
 //
-//     server/bankImport.ts        kassaEntry.create   ← jurnalga yozmaydi
+//     server/bank/post.ts         kassaEntry.create   ← jurnalga yozmaydi
 //     lib/transit.ts              kassaEntry.create   ← jurnalga yozmaydi
 //     scripts/import-kassa-data.ts kassaEntry.create  ← jurnalga yozmaydi
 //
@@ -224,7 +224,7 @@ export interface CashResult {
  * Kassa kirimi/chiqimi + uning ikki tomonlama yozuvi.
  *
  * Uchala "jurnalsiz" yo'l shu funksiyaga keladi: bank chiqimi
- * (`server/bankImport.ts`), karta xarajati (`lib/transit.ts`) va tarixiy
+ * (`server/bank/post.ts`), karta xarajati (`lib/transit.ts`) va tarixiy
  * import (`scripts/import-kassa-data.ts`).
  */
 export async function recordKassaMovement(

@@ -81,7 +81,7 @@ export async function serializable<T>(
  * (`lib/bank/importStatement.ts` `applyAllocation`) beshta alohida yozuv
  * qiladi — `Payment` upsert → `PaymentAllocation` upsert → `Payment.amount`
  * qayta hisoblash → `reverseLedger` → `postLedger`. Uning HAR BIR chaqiruvchisi
- * (server/bankImport.ts, scripts/*, testlar — 14 joy) esa xom `prisma` beradi,
+ * (server/bank/*.ts, scripts/*, testlar — 14 joy) esa xom `prisma` beradi,
  * ya'ni bu beshlik BITTA tranzaksiyada emas edi.
  *
  * Oqibati moliyaviy: `reverseLedger` bajarilib, `postLedger` yiqilsa (yoki

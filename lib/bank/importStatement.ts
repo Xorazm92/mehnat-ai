@@ -3,7 +3,7 @@
 // =====================================================
 //
 // Framework-free (db argument sifatida beriladi), shuning uchun aynan shu kod
-// ham veb-yuklashda (server/bankImport.ts), ham bir martalik backfill
+// ham veb-yuklashda (server/bank/upload.ts), ham bir martalik backfill
 // skriptida (scripts/import-statements.ts) ishlaydi. Parse mantiqi ikki joyda
 // takrorlanmaydi.
 //
@@ -227,7 +227,7 @@ export async function autoMatchTransactions(
 
 /** "YYYY-MM" — Payment.period formati. */
 // Davr kaliti `lib/periods.ts` dan — bank moduli o'z nusxasini yuritmaydi.
-// Qayta eksport: mavjud importerlar (`server/bankImport.ts`, `server/transit.ts`,
+// Qayta eksport: mavjud importerlar (`server/bank/post.ts`, `server/transit.ts`,
 // `scripts/import-statements.ts`) `periodOf` nomi bilan chaqiradi.
 export const periodOf = periodKeyOf;
 

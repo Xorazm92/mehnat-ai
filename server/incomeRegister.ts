@@ -93,7 +93,7 @@ const SOURCES = new Set(["bank", "plastik", "naqd"]);
  *     qatorda ikkita zid ma'lumot;
  *   · plastik tushum 1 mln o'rniga 64,5 mln bo'lib ko'rinardi.
  *
- * `server/bankImport.getNonBankIncome` ALLAQACHON shu ikki toifani oq
+ * `server/bank/read.ts` dagi `getNonBankIncome` ALLAQACHON shu ikki toifani oq
  * ro'yxatga olgan — ya'ni ikki ekran bir xil ma'lumotni ikki xil o'qirdi.
  * Endi ta'rif bitta.
  */

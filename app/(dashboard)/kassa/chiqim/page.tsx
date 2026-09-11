@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { currentUserViews } from "@/server/rbac";
 import { prisma } from "@/lib/prisma";
 import { getTransitOverview, getUnlinkedCardTransfers, getHouseholdExpenses } from "@/server/transit";
-import { getExpenseQueue } from "@/server/bankImport";
+import { getExpenseQueue } from "@/server/bank/read";
 import { getExpenses } from "@/server/kassa";
 import { getPayoutRegister } from "@/server/payouts";
 import { getAvailableBalance } from "@/lib/balance";
