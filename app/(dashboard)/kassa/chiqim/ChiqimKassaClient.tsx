@@ -5,33 +5,28 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
-  CreditCard, Link2, Plus, Wand2, Snowflake, Play, AlertTriangle, ArrowDownRight, ArrowUpRight, Users,
-  Wallet, ListChecks,
-} from "lucide-react";
+  CreditCard, Link2, Plus, Wand2, AlertTriangle, Users,
+  Wallet, } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
-import { todayKey, formatNum, formatUzDate, submitOnCtrlEnter } from "@/lib/platform/format";
+import { formatNum, formatUzDate } from "@/lib/platform/format";
 import {
-  Badge, DataTable, EmptyState, MetricRail, Modal, Money, PageHeader,
-  type DataColumn, type MetricTone,
-} from "@/components/ui";
+  Badge, DataTable, Money, PageHeader,
+  type DataColumn, } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
-import { Field } from "@/components/ui/Field";
-import { MoneyField } from "@/components/ui/MoneyField";
-import { Select } from "@/components/ui/Select";
 import { EXPENSE_CATEGORY_LABELS } from "@/lib/bank/classifyExpense";
 // Sof konstantalar moduli — `lib/transit.ts` orqali kelsa Prisma/`pg` mijoz
 // to'plamiga tortiladi va build "Can't resolve 'dns'/'net'/'tls'" bilan yiqiladi.
-import { CHANNEL_TYPE_LABELS, type ChannelType } from "@/lib/transitChannels";
 import {
   upsertChannel,
-  setChannelActive,
   autoCreateChannelsFromStatements,
-  linkCardTransfer,
-  spendFromChannel,
   getTransitLedger,
 } from "@/server/transit";
 import { friendlyError } from "@/lib/actionError";
 import ExpenseQueue, { type ExpenseQueueData } from "./ExpenseQueue";
+import ExpenseSummaryRail from "./ExpenseSummaryRail";
+import ExpenseCardsSection from "./ExpenseCardsSection";
+import ExpenseChannelForm from "./ExpenseChannelForm";
+import type { Channel, LedgerRow, UnlinkedTransfer } from "./types";
 import { Tabs, type TabItem } from "@/components/ui";
 import ExpenseModule from "@/components/ExpenseModule";
 import type { Expense, BalanceBreakdown } from "@/types";
@@ -40,42 +35,8 @@ import { createAvansPayout, createPayout } from "@/server/payouts";
 import { BreadcrumbTrail } from "@/components/BreadcrumbTrail";
 import { sectionCrumbs, sectionMeta } from "@/lib/navigation";
 import { usePrompt } from "@/components/ui/ConfirmDialog";
-import { DateField } from "@/components/ui/DateField";
 import { useTabParam } from "@/hooks/useTabParam";
 import { CHIQIM_TAB_IDS, type ChiqimTab } from "@/lib/chiqimTabs";
-
-interface Channel {
-  id: string;
-  type: string;
-  label: string;
-  cardMask: string | null;
-  employeeId: string | null;
-  employeeName: string | null;
-  isActive: boolean;
-  totalIn: number;
-  totalOut: number;
-  balance: number;
-  entryCount: number;
-  lastMovementAt: string | null;
-}
-
-interface UnlinkedTransfer {
-  id: string;
-  valueDate: string;
-  amount: string | number;
-  accountLabel: string;
-  cardMask: string | null;
-  holderName: string | null;
-}
-
-interface LedgerRow {
-  id: string;
-  direction: string;
-  amount: string | number;
-  date: string;
-  category: string | null;
-  description: string | null;
-}
 
 
 /**
@@ -161,12 +122,6 @@ const card: React.CSSProperties = {
 };
 
 /** Modal pastidagi tugmalar formadan tashqarida — `form` atributi bog'laydi. */
-const CHANNEL_FORM_ID = "channel-form";
-const SPEND_FORM_ID = "spend-form";
-
-/** Kartadan qilinadigan odatiy xarajatlar. */
-const SPEND_CATEGORIES = ["ijara", "aloqa", "ovqat", "soliq", "bank_komissiya", "boshqa"] as const;
-
 /** Kanal tarixi — kartochka ichida ochiladigan jadval. */
 const LEDGER_COLUMNS: DataColumn<LedgerRow>[] = [
   { key: "date", header: "Sana", cell: (e) => <span className="tabular-nums">{formatUzDate(e.date)}</span>, sortValue: (e) => e.date, width: "110px", mobile: "meta" },
@@ -451,68 +406,19 @@ export default function ChiqimKassaClient({
           qancha pul qolgan — umuman ko'rmasdi va har savol uchun tab
           almashtirishi kerak edi. `MetricRail` bitta qatorda ~90px oladi,
           ish jadvalini sezilarli pastga surmaydi. */}
-      <MetricRail
-        columns={canManageChannels ? 5 : 3}
-        items={[
-          ...(canManageChannels
-            ? [
-                {
-                  label: "Yopish kerak",
-                  value: queue.rows.length,
-                  unit: "ta",
-                  hint: `${formatNum(queueTotal)} so'm vipiskadan`,
-                  icon: <ListChecks size={13} />,
-                  tone: (queue.rows.length > 0 ? "warning" : "success") as MetricTone,
-                },
-              ]
-            : []),
-          {
-            label: "Tasdiq kutmoqda",
-            value: pendingCount,
-            unit: "ta",
-            hint: `${formatNum(pendingAmount)} so'm`,
-            icon: <AlertTriangle size={13} />,
-            tone: (pendingCount > 0 ? "warning" : "success") as MetricTone,
-          },
-          {
-            label: "Tasdiqlangan xarajat",
-            value: formatNum(approvedAmount),
-            unit: "so'm",
-            hint: `${approvedCount} ta yozuv`,
-            icon: <ArrowUpRight size={13} />,
-            tone: "neutral" as MetricTone,
-          },
-          ...(canManageChannels
-            ? [
-                {
-                  label: "Kartalarda qoldiq",
-                  value: formatNum(totalBalance),
-                  unit: "so'm",
-                  hint: `${active.length} faol · ${frozen.length} muzlatilgan kanal`,
-                  icon: <Wallet size={13} />,
-                  tone: (totalBalance < 0 ? "danger" : "brand") as MetricTone,
-                  emphasis: true,
-                },
-                {
-                  label: "Bog'lanmagan o'tkazma",
-                  value: unlinkedCount,
-                  unit: "ta",
-                  hint: "qaysi kartaga tushgani noma'lum",
-                  icon: <Link2 size={13} />,
-                  tone: (unlinkedCount > 0 ? "warning" : "neutral") as MetricTone,
-                },
-              ]
-            : [
-                {
-                  label: "Rad etilgan",
-                  value: rejectedCount,
-                  unit: "ta",
-                  hint: "qayta ko'rib chiqish uchun",
-                  icon: <AlertTriangle size={13} />,
-                  tone: (rejectedCount > 0 ? "danger" : "neutral") as MetricTone,
-                },
-              ]),
-        ]}
+      <ExpenseSummaryRail
+        canManageChannels={canManageChannels}
+        queue={queue}
+        queueTotal={queueTotal}
+        pendingCount={pendingCount}
+        pendingAmount={pendingAmount}
+        approvedCount={approvedCount}
+        approvedAmount={approvedAmount}
+        totalBalance={totalBalance}
+        activeCount={active.length}
+        frozenCount={frozen.length}
+        unlinkedCount={unlinkedCount}
+        rejectedCount={rejectedCount}
       />
 
       {/* `canManageChannels=false` bo'lganda tab almashtirgichning o'zi
@@ -539,7 +445,7 @@ export default function ChiqimKassaClient({
       )}
 
       {/* Yangi kanal */}
-      <ChannelForm
+      <ExpenseChannelForm
         open={showNew}
         employees={employees}
         busy={busy}
@@ -550,119 +456,21 @@ export default function ChiqimKassaClient({
         }}
       />
 
-      {tab === "kartalar" && (<>
-      {/* Kanallar */}
-      <div className="space-y-2">
-        <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
-          Kanallar ({channels.length})
-        </h2>
-        {channels.length === 0 ? (
-          <div className="rounded-xl" style={card}>
-            <EmptyState
-              icon={<CreditCard size={28} />}
-              title="Kanal yo'q"
-              description="Xodim kartalarini vipiskadan avtomatik aniqlash mumkin."
-              action={
-                <Button variant="secondary" size="sm" disabled={busy}
-                  onClick={() => run(() => autoCreateChannelsFromStatements(), "Vipiskadan kanallar aniqlandi")}>
-                  <Wand2 size={14} /> Vipiskadan aniqlash
-                </Button>
-              }
-            />
-          </div>
-        ) : (
-          channels.map((c) => (
-            <div key={c.id} className="rounded-xl overflow-hidden" style={card}>
-              <div className="p-4 flex items-start justify-between gap-3 flex-wrap">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <CreditCard size={15} style={{ color: "var(--text-muted)" }} />
-                    <span className="font-semibold" style={{ color: "var(--text)" }}>{c.label}</span>
-                    {c.cardMask && (
-                      <span className="text-micro tabular-nums" style={{ color: "var(--text-muted)" }}>{c.cardMask}</span>
-                    )}
-                    <Badge tone="neutral">{CHANNEL_TYPE_LABELS[c.type as ChannelType] ?? c.type}</Badge>
-                    {!c.isActive && <Badge tone="warning" icon={<Snowflake size={11} />}>Muzlatilgan</Badge>}
-                  </div>
-                  <div className="text-micro mt-1" style={{ color: "var(--text-muted)" }}>
-                    {c.employeeName ? `${c.employeeName} · ` : ""}
-                    {c.entryCount} ta harakat
-                    {c.lastMovementAt ? ` · oxirgisi ${formatUzDate(c.lastMovementAt)}` : ""}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="text-micro" style={{ color: "var(--text-muted)" }}>Qoldiq</div>
-                    <div className="text-lg font-semibold tabular-nums" style={{ color: c.balance < 0 ? "var(--danger)" : c.balance > 0 ? "var(--success)" : "var(--text)" }}>
-                      {formatNum(c.balance)}
-                    </div>
-                  </div>
-                  <div className="text-right text-micro tabular-nums" style={{ color: "var(--text-muted)" }}>
-                    <div><ArrowDownRight size={11} className="inline" /> {formatNum(c.totalIn)}</div>
-                    <div><ArrowUpRight size={11} className="inline" /> {formatNum(c.totalOut)}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-4 pb-3 flex gap-2 flex-wrap">
-                <Button variant="secondary" size="sm" onClick={() => toggleLedger(c.id)}>
-                  {openLedger === c.id ? "Tarixni yopish" : "Tarix"}
-                </Button>
-                {c.isActive && (
-                  <Button variant="primary" size="sm" disabled={busy} onClick={() => setSpendFor(c)}>
-                    Xarajat yozish
-                  </Button>
-                )}
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => run(() => setChannelActive(c.id, !c.isActive), c.isActive ? "Muzlatildi" : "Qayta yoqildi")}
-                >
-                  {c.isActive ? <><Snowflake size={13} /> Muzlatish</> : <><Play size={13} /> Yoqish</>}
-                </Button>
-              </div>
-
-              {openLedger === c.id && (
-                <div style={{ borderTop: "1px solid var(--card-border)" }}>
-                  <DataTable
-                    rows={ledger}
-                    columns={LEDGER_COLUMNS}
-                    rowKey={(e) => e.id}
-                    caption={`${c.label} kanalining pul harakati`}
-                    // Kanal kartochkasi ICHIDA — o'z balandligi bilan cheklanmaydi,
-                    // aks holda kartochka ichida ikkinchi aylantirish paydo bo'lardi.
-                    maxBodyHeight={null}
-                    density="compact"
-                    emptyTitle="Harakat yo'q"
-                    emptyDescription="Bu kanalda hali kirim ham, sarf ham qayd etilmagan."
-                  />
-                </div>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Xarajat yozish */}
-      {spendFor && (
-        <SpendForm
-          key={spendFor.id}
-          channel={spendFor}
+      {tab === "kartalar" && (
+        <ExpenseCardsSection
+          channels={channels}
+          active={active}
+          unlinked={unlinked}
           busy={busy}
-          onCancel={() => setSpendFor(null)}
-          onSave={async (payload) => {
-            const res = await run(
-              () => spendFromChannel({ ...payload, channelId: spendFor.id }),
-              "Xarajat yozildi"
-            );
-            if (res !== null) setSpendFor(null);
-          }}
+          openLedger={openLedger}
+          ledger={ledger}
+          ledgerColumns={LEDGER_COLUMNS}
+          onToggleLedger={toggleLedger}
+          spendFor={spendFor}
+          onSpend={setSpendFor}
+          run={run}
         />
       )}
-
-      </>)}
 
       {tab === "navbat" && (<>
       <ExpenseQueue queue={queue} />
@@ -867,234 +675,9 @@ export default function ChiqimKassaClient({
       />
       </>)}
 
-      {tab === "kartalar" && (<>
-      {/* Bog'lanmagan karta o'tkazmalari */}
-      <div className="space-y-2">
-        <h2 className="text-body font-semibold" style={{ color: "var(--text)" }}>
-          Bog&apos;lanmagan karta o&apos;tkazmalari ({unlinked.length})
-        </h2>
-        {unlinked.length === 0 ? (
-          <div className="rounded-xl" style={card}>
-            <EmptyState
-              icon={<ListChecks size={28} />}
-              title="Hammasi bog'langan"
-              description="Karta o'tkazmalarining barchasi o'z kanaliga biriktirilgan."
-            />
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {unlinked.map((t) => (
-              <div key={t.id} className="p-3 rounded-xl flex items-center justify-between gap-3 flex-wrap" style={card}>
-                <div className="min-w-0">
-                  <div className="font-semibold" style={{ color: "var(--text)" }}>
-                    {t.holderName ?? "Nomsiz"}{" "}
-                    {t.cardMask && (
-                      <span className="text-micro tabular-nums font-normal" style={{ color: "var(--text-muted)" }}>{t.cardMask}</span>
-                    )}
-                  </div>
-                  <div className="text-micro" style={{ color: "var(--text-muted)" }}>
-                    {formatUzDate(t.valueDate)} · {t.accountLabel}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-lg font-semibold tabular-nums whitespace-nowrap">
-                    <Money value={-Math.abs(Number(t.amount))} tone="out" bold />
-                  </span>
-                  <Select
-                    size="sm"
-                    fullWidth={false}
-                    defaultValue=""
-                    disabled={busy}
-                    placeholder="Kanalni tanlang…"
-                    aria-label={`${t.holderName ?? "Nomsiz"} o'tkazmasini kanalga bog'lash`}
-                    onChange={(e) => {
-                      if (!e.target.value) return;
-                      void run(
-                        () => linkCardTransfer({ transactionId: t.id, channelId: e.target.value }),
-                        "Kanalga bog'landi"
-                      );
-                    }}
-                  >
-                    {active.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.label}{c.cardMask ? ` (${c.cardMask})` : ""}
-                      </option>
-                    ))}
-                  </Select>
-                  <Link2 size={14} style={{ color: "var(--text-muted)" }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      </>)}
 
     </div>
   );
 }
 
-// ── Yordamchi formalar ───────────────────────────────────────────────────
 
-function ChannelForm({
-  open, employees, busy, onCancel, onSave,
-}: {
-  open: boolean;
-  employees: { id: string; fullName: string }[];
-  busy: boolean;
-  onCancel: () => void;
-  onSave: (p: { type: ChannelType; label: string; employeeId: string | null; cardMask: string | null }) => void;
-}) {
-  const [label, setLabel] = useState("");
-  const [cardMask, setCardMask] = useState("");
-  const [employeeId, setEmployeeId] = useState("");
-  const [type, setType] = useState<ChannelType>("employee_card");
-
-  const submit = () => {
-    if (!label.trim()) return;
-    onSave({ type, label, cardMask: cardMask || null, employeeId: employeeId || null });
-  };
-
-  return (
-    <Modal
-      open={open}
-      onClose={onCancel}
-      dismissable={!busy}
-      size="lg"
-      title="Yangi kanal"
-      description="Pul qaysi karta yoki seyf orqali o'tishini shu yerda ro'yxatga olasiz."
-      footer={
-        <>
-          <Button type="button" variant="secondary" size="md" disabled={busy} onClick={onCancel}>
-            Bekor qilish
-          </Button>
-          <Button type="submit" form={CHANNEL_FORM_ID} variant="primary" size="md" loading={busy} disabled={busy || !label.trim()}>
-            Saqlash
-          </Button>
-        </>
-      }
-    >
-      <form
-        id={CHANNEL_FORM_ID}
-        onSubmit={(e) => { e.preventDefault(); submit(); }}
-        onKeyDown={submitOnCtrlEnter(submit)}
-        className="space-y-3"
-      >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Turi" required>
-            <Select value={type} onChange={(e) => setType(e.target.value as ChannelType)}>
-              {(Object.keys(CHANNEL_TYPE_LABELS) as ChannelType[]).map((t) => (
-                <option key={t} value={t}>{CHANNEL_TYPE_LABELS[t]}</option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Nom" required>
-            <input
-              className="erp-input w-full"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="Masalan: Uchqun Azimboyev"
-            />
-          </Field>
-          <Field
-            label="Karta niqobi"
-            hint="To'liq karta raqami saqlanmaydi — faqat niqob (birinchi 4 va oxirgi 4 raqam)."
-          >
-            <input
-              className="erp-input w-full"
-              value={cardMask}
-              onChange={(e) => setCardMask(e.target.value)}
-              placeholder="8600****4957"
-            />
-          </Field>
-          <Field label="Xodim (ixtiyoriy)">
-            <Select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} placeholder="— Bog'lanmagan —">
-              {employees.map((e) => <option key={e.id} value={e.id}>{e.fullName}</option>)}
-            </Select>
-          </Field>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-function SpendForm({
-  channel, busy, onCancel, onSave,
-}: {
-  channel: Channel;
-  busy: boolean;
-  onCancel: () => void;
-  onSave: (p: { amount: number; date: string; category: string; description?: string }) => void;
-}) {
-  const [amount, setAmount] = useState<number | null>(null);
-  // Toshkent kalendari — UTC standart tunda kecha sanani berardi.
-  const [date, setDate] = useState(todayKey());
-  const [category, setCategory] = useState<string>("ijara");
-  const [description, setDescription] = useState("");
-
-  const value = amount ?? 0;
-  // Qoldiqdan ortiq sarf — server ham to'sadi, bu faqat oldindan ogohlantirish.
-  const over = value > channel.balance;
-  const canSave = !busy && value > 0 && !over;
-
-  const submit = () => {
-    if (!canSave) return;
-    onSave({ amount: value, date, category, description });
-  };
-
-  return (
-    <Modal
-      open
-      onClose={onCancel}
-      dismissable={!busy}
-      size="lg"
-      title={`${channel.label} — xarajat yozish`}
-      description={`Kanal qoldig'i: ${formatNum(channel.balance)} so'm`}
-      footer={
-        <>
-          <Button type="button" variant="secondary" size="md" disabled={busy} onClick={onCancel}>
-            Bekor qilish
-          </Button>
-          <Button type="submit" form={SPEND_FORM_ID} variant="primary" size="md" loading={busy} disabled={!canSave}>
-            Yozish
-          </Button>
-        </>
-      }
-    >
-      <form
-        id={SPEND_FORM_ID}
-        onSubmit={(e) => { e.preventDefault(); submit(); }}
-        onKeyDown={submitOnCtrlEnter(submit)}
-        className="space-y-3"
-      >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field
-            label="Summa"
-            required
-            error={over ? `Qoldiqdan ${formatNum(value - channel.balance)} so'm ortiq — bunday yozuvga yo'l qo'yilmaydi.` : null}
-          >
-            <MoneyField value={amount} onChange={setAmount} placeholder="10 000 000" />
-          </Field>
-          <Field label="Sana" required>
-            <DateField value={date} onChange={setDate} />
-          </Field>
-          <Field label="Toifa" required>
-            <Select value={category} onChange={(e) => setCategory(e.target.value)}>
-              {SPEND_CATEGORIES.map((c) => (
-                <option key={c} value={c}>{EXPENSE_CATEGORY_LABELS[c as never] ?? c}</option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Izoh">
-            <input
-              className="erp-input w-full"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ixtiyoriy"
-            />
-          </Field>
-        </div>
-      </form>
-    </Modal>
-  );
-}
