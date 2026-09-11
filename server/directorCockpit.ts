@@ -30,7 +30,7 @@ import {
   getDirectorCockpitFinance,
   type DirectorCockpitFinance,
 } from "@/lib/domains/accounting/directorCockpitFinance";
-import { approveExpense } from "@/server/kassa";
+import { approveExpense } from "@/server/kassa/expenses";
 import { reassignObligation } from "@/server/obligations";
 
 /**
@@ -74,7 +74,7 @@ export async function getCockpitFinance(): Promise<DirectorCockpitFinance | null
 /**
  * Kutayotgan xarajatni kokpitdan tasdiqlash.
  *
- * `approveExpense` (server/kassa.ts) o'z tekshiruvlarini SAQLAYDI — chegara
+ * `approveExpense` (server/kassa/expenses.ts) o'z tekshiruvlarini SAQLAYDI — chegara
  * (`canApproveExpense`), davr qulfi, balans va manba qoldig'i darvozasi
  * hammasi o'sha yerda qoladi. Bu funksiya ularni almashtirmaydi, faqat
  * ustiga ikki narsa qo'shadi: direktor darvozasi va SABAB.

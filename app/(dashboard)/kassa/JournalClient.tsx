@@ -37,8 +37,8 @@ import { RANGE_LABELS, type RangePreset } from "@/lib/dateRange";
 import { exportRowsToExcel, type ExportColumn } from "@/lib/exportTable";
 import type { JournalRow } from "@/server/kassaJournal";
 import { getKassaJournal } from "@/server/kassaJournal";
-import {
-  createKassaEntry, deleteKassaEntry, approveExpense, rejectExpense } from "@/server/kassa";
+import { createKassaEntry, deleteKassaEntry } from "@/server/kassa/entries";
+import { approveExpense, rejectExpense } from "@/server/kassa/expenses";
 import { DateField } from "@/components/ui/DateField";
 import { isSalaryCategory } from "@/lib/salaryCategory";
 

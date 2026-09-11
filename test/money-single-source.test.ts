@@ -30,7 +30,7 @@ const { prisma } = await import("@/lib/prisma");
 const { ACCOUNTS, postLedger, getCashByChannel, getLedgerCashBalance } = await import("@/lib/ledger");
 const { getMonthMovement } = await import("@/lib/balance");
 const { applyAllocation } = await import("@/lib/bank/importStatement");
-const { createKassaEntry } = await import("@/server/kassa");
+const { createKassaEntry } = await import("@/server/kassa/entries");
 
 const TAG = `vitest-m1-${Date.now()}`;
 

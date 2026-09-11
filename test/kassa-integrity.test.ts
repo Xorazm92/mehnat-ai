@@ -30,7 +30,7 @@ const { recordManualReceipt } = await import("@/server/bank/post");
 const { getAvailableBalance } = await import("@/lib/balance");
 const { periodKeyOf } = await import("@/lib/periods");
 const { computeCloseFigures } = await import("@/lib/monthClose");
-const { upsertPayment, getPayments, deletePayment } = await import("@/server/kassa");
+const { upsertPayment, getPayments, deletePayment } = await import("@/server/kassa/payments");
 
 const TAG = `vitest-integrity-${Date.now()}`;
 // 2098-yil — boshqa test fayllari 2099 ni band qilgan, davr ham ochiq.
@@ -459,7 +459,7 @@ describe("moliyaviy yordam (qarz) balansga kiradi", () => {
 // 5. upsertPayment — KANALSIZ TO'LOV YOZILMAYDI (R-09)
 // ─────────────────────────────────────────────────────────
 //
-// PROD AUDITIDA TOPILDI (2026-09-03): `upsertPayment` (server/kassa.ts) —
+// PROD AUDITIDA TOPILDI (2026-09-03): `upsertPayment` (server/kassa/payments.ts) —
 // "/kassa/qarzdorlik" dagi oddiy to'lov formasi — pul qaysi hisobga
 // tushganini so'ramasdi. Prodda shu yo'ldan 174 ta yozuv, 872 mln so'm
 // kanalsiz kirgan edi ("Kassalar hisoboti" ularni umuman ko'rmaydi —

@@ -176,7 +176,7 @@ export async function getCashDeskReport(period?: string): Promise<CashDeskReport
 // MANBA — `KassaEntry`, jurnal EMAS. Sabab: modda (`category`) jurnal
 // oyoqlarida saqlanmaydi, u faqat kassa yozuvida turadi. Ikkalasining
 // summasi bir xil bo'lishi kerak, chunki har kassa yozuvi jurnalga aynan
-// o'z summasi bilan tushadi (`server/kassa.ts` postExpenseLegs).
+// o'z summasi bilan tushadi (`server/kassa/shared.ts` postExpenseLegs).
 //
 // OYLIK — `Payout` DAN QO'SHILADI. U kassa moddasi emas (`KassaEntry` da
 // "Oylik" toifasi ataylab taqiqlangan, `lib/kassaCategories.ts`), lekin PUL

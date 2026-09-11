@@ -108,7 +108,7 @@ async function checkLedgerSourceIntegrity(db: Db, key: string): Promise<string[]
   }
   for (const p of payments) {
     // `isSettledPayment` — 'paid' VA 'partial'. Aynan shu shart bilan
-    // `server/kassa.ts` `upsertPayment` jurnalga yozadi; bu yerda faqat 'paid'
+    // `server/kassa/payments.ts` `upsertPayment` jurnalga yozadi; bu yerda faqat 'paid'
     // kutilardi, ya'ni qo'lda kiritilgan HAR QANDAY qisman to'lov "ledger mos
     // emas" xatosi berib oy yopilishini BLOKLAB qo'yardi.
     expected.set(

@@ -10,7 +10,7 @@ import {
   getDebtStatement,
 } from "@/server/debt";
 import { getCachedCompanies } from "@/lib/cached-queries";
-import { getPayments } from "@/server/kassa";
+import { getPayments } from "@/server/kassa/payments";
 import QarzdorlikClient from "./QarzdorlikClient";
 import { readTabParam } from "@/lib/tabs";
 import { QARZDORLIK_TAB_IDS, QARZDORLIK_DEFAULT_TAB, type QarzdorlikTab } from "@/lib/qarzdorlikTabs";

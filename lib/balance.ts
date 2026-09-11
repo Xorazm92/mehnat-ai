@@ -106,7 +106,7 @@ export async function getAvailableBalance(opts?: {
       // uchun har bir to'lov qatorida "offset" ulushi chiqarib tashlanadi.
       //
       // Allocation'i yo'q qatorlar (eski/qo'lda kiritilgan, applyAllocation
-      // dan oldingi davr yoki server/kassa.ts#upsertPayment orqali) — to'liq
+      // dan oldingi davr yoki server/kassa/payments.ts#upsertPayment orqali) — to'liq
       // naqd deb hisoblanadi: ular ta'rifiga ko'ra "offset" bo'la olmaydi,
       // chunki offset FAQAT applyAllocation orqali (source='offset') kiradi.
       db.payment.findMany({

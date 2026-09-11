@@ -80,7 +80,7 @@ export function runCashTx<T>(fn: (db: Db) => Promise<T>): Promise<T> {
  *
  * NEGA EKSPORT QILINADI. Bu tekshiruv shu faylda, `recordKassaMovement` ichida
  * yopiq turardi — ya'ni u FAQAT import/skript yo'lida ishlardi. Ekrandan
- * yoziladigan chiqim esa (`server/kassa.ts` `createKassaEntry` /
+ * yoziladigan chiqim esa (`server/kassa/entries.ts` `createKassaEntry` /
  * `approveExpense` / `updateExpense`) manba qatorini va jurnalni O'ZI yozadi va
  * bu darvozadan umuman o'tmasdi. Natijada qo'riqchi teskari tomonga qarab
  * turardi: mart oyidagi vipiska qatori bloklanardi, bugun jonli foydalanuvchi

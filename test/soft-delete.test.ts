@@ -15,15 +15,15 @@ vi.mock("@/lib/auth", () => ({ auth: async () => SESSION }));
 vi.mock("server-only", () => ({}));
 
 const { prisma } = await import("@/lib/prisma");
-const { createKassaEntry, deleteKassaEntry, createExpense, deleteExpense, getKassaEntries } =
-  await import("@/server/kassa");
+const { createKassaEntry, deleteKassaEntry, getKassaEntries } = await import("@/server/kassa/entries");
+const { createExpense, deleteExpense } = await import("@/server/kassa/expenses");
 
 const TAG = `vitest-softdel-${Date.now()}`;
 const DATE = new Date(2099, 7, 15); // 2099-08 — ochiq davr
 const ids = { user: "" };
 
 beforeAll(async () => {
-  // Chiqim MANBASIZ yozilmaydi (server/kassa.ts) — test uchun naqd kanal.
+  // Chiqim MANBASIZ yozilmaydi (server/kassa/entries.ts) — test uchun naqd kanal.
   const channel = await prisma.disbursementChannel.create({
     data: { type: "cash", label: `${TAG}-cash` },
   });

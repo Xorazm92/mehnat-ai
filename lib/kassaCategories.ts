@@ -24,7 +24,7 @@ export const DEFAULT_KASSA_CATEGORIES: KassaCategories = {
   // o'sha yerdan sanaydi (`lib/balance.ts`) — kassa chiqimi sifatida ham
   // yozilsa bitta to'lov ikki marta hisobga kirardi. Bank importi buni
   // allaqachon bloklaydi (`lib/bank/classifyExpense.ts` NON_POSTABLE_CATEGORIES),
-  // qo'lda kiritish yo'lida esa himoya yo'q edi — endi `server/kassa.ts`
+  // qo'lda kiritish yo'lida esa himoya yo'q edi — endi `server/kassa/entries.ts`
   // `createKassaEntry` da qo'riqchi bor.
   expense: [
     "Arenda", "Internet", "Telefon", "Dividend", "Qarz", "Ovqatga",

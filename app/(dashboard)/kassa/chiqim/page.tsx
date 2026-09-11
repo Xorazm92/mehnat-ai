@@ -4,7 +4,7 @@ import { currentUserViews } from "@/server/rbac";
 import { prisma } from "@/lib/prisma";
 import { getTransitOverview, getUnlinkedCardTransfers, getHouseholdExpenses } from "@/server/transit";
 import { getExpenseQueue } from "@/server/bank/read";
-import { getExpenses } from "@/server/kassa";
+import { getExpenses } from "@/server/kassa/expenses";
 import { getPayoutRegister } from "@/server/payouts";
 import { getAvailableBalance } from "@/lib/balance";
 import { KASSA_CATEGORIES_KEY, resolveKassaCategories } from "@/lib/kassaCategories";

@@ -239,7 +239,7 @@ async function main(): Promise<void> {
   // CASH oyoqlaridan o'qiydi, `KassaEntry` jadvalidan EMAS. Ya'ni jurnalsiz
   // yozuv balansga ham, kassalar jadvaliga ham TUSHMAYDI — u faqat
   // ro'yxatda ko'rinib turadigan "o'lik" qator bo'lardi. Shuning uchun
-  // import ham `server/kassa.ts` dagi bilan AYNAN BIR XIL oyoqlarni yozadi.
+  // import ham `server/kassa/shared.ts` dagi bilan AYNAN BIR XIL oyoqlarni yozadi.
   const importer = await prisma.user.findFirst({
     where: { role: "super_admin", isActive: true },
     select: { id: true },

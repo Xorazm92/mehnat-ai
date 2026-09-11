@@ -19,7 +19,7 @@ export interface Payment {
   paymentMethod?: string; // 'naqd' | 'plastik' | 'schyot' | 'terminal' | 'boshqa'
   /**
    * Pul MANBAI — `DisbursementChannel.id`. Faqat `status` paid/partial
-   * bo'lganda majburiy (server/kassa.ts upsertPayment) — pul haqiqatan
+   * bo'lganda majburiy (server/kassa/payments.ts upsertPayment) — pul haqiqatan
    * qaysi hisobga tushganini jurnalga yozadi. `Payment` jadvalida
    * saqlanmaydi (LedgerEntry.channelId ga to'g'ridan-to'g'ri o'tadi),
    * shuning uchun bu maydon faqat FORMA holati, DB ustuni emas.

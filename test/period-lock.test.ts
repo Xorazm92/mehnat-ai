@@ -14,7 +14,8 @@ vi.mock("server-only", () => ({}));
 
 const { prisma } = await import("@/lib/prisma");
 const { unlockPeriod } = await import("@/server/accounting");
-const { createKassaEntry, createExpense } = await import("@/server/kassa");
+const { createKassaEntry } = await import("@/server/kassa/entries");
+const { createExpense } = await import("@/server/kassa/expenses");
 const { createPayrollAdjustment, approveEmployeeSalary } = await import("@/server/payroll");
 
 const TAG = `vitest-lock-${Date.now()}`;
@@ -23,7 +24,7 @@ const LOCKED_DATE = new Date(2097, 4, 10); // 2097-05-10
 const ids = { user: "", channel: "" };
 
 beforeAll(async () => {
-  // Chiqim endi MANBASIZ yozilmaydi (server/kassa.ts) — test uchun bitta
+  // Chiqim endi MANBASIZ yozilmaydi (server/kassa/entries.ts) — test uchun bitta
   // naqd kanal yaratamiz, aks holda qulf tekshiruvi kanal xatosiga urilardi.
   const ch = await prisma.disbursementChannel.create({
     data: { type: "cash", label: `${TAG}-cash` },

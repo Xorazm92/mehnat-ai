@@ -26,7 +26,12 @@ vi.mock("next/cache", () => ({ revalidateTag: () => {}, revalidatePath: () => {}
 const { prisma } = await import("@/lib/prisma");
 const { getAvailableBalance } = await import("@/lib/balance");
 const { serializable } = await import("@/lib/tx");
-const kassa = await import("@/server/kassa");
+// `kassa` nomi saqlanadi — testda 8 joyda ishlatiladi va modul bo'linishi
+// testning o'qilishini o'zgartirmasligi kerak.
+const kassa = {
+  ...(await import("@/server/kassa/entries")),
+  ...(await import("@/server/kassa/expenses")),
+};
 
 const TAG = `vitest-race-${Date.now()}`;
 let accountantId = "";

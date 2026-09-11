@@ -20,7 +20,7 @@ import { sectionCrumbs, sectionMeta } from "@/lib/navigation";
 import { DEBT_AGING_STAGES, debtAgingStage, type DebtAgingStage } from "@/lib/debtAging";
 import { useRouter } from "next/navigation";
 import KassaModule from "@/components/KassaModule";
-import { upsertPayment, deletePayment } from "@/server/kassa";
+import { upsertPayment, deletePayment } from "@/server/kassa/payments";
 import type { Company, Payment } from "@/types";
 
 /** companyId → serverda hisoblangan qarz (`lib/debt.ts`). Klient hech narsa

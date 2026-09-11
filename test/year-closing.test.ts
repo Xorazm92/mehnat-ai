@@ -17,14 +17,14 @@ vi.mock("server-only", () => ({}));
 
 const { prisma } = await import("@/lib/prisma");
 const { closeYear, getOpeningBalance, unlockPeriod, getYearClosingState } = await import("@/server/accounting");
-const { createExpense } = await import("@/server/kassa");
+const { createExpense } = await import("@/server/kassa/expenses");
 
 const TAG = `vitest-close-${Date.now()}`;
 const YEAR = 2096;
 const ids = { user: "", company: "", payment: "", kassa: "", expense: "", payout: "", channel: "" };
 
 beforeAll(async () => {
-  // Chiqim MANBASIZ yozilmaydi (server/kassa.ts) — test uchun naqd kanal.
+  // Chiqim MANBASIZ yozilmaydi (server/kassa/entries.ts) — test uchun naqd kanal.
   const ch = await prisma.disbursementChannel.create({
     data: { type: "cash", label: `${TAG}-cash` },
   });

@@ -35,7 +35,7 @@ import ExpenseQueue, { type ExpenseQueueData } from "./ExpenseQueue";
 import { Tabs, type TabItem } from "@/components/ui";
 import ExpenseModule from "@/components/ExpenseModule";
 import type { Expense, BalanceBreakdown } from "@/types";
-import { createExpense, updateExpense, deleteExpense, approveExpense, rejectExpense } from "@/server/kassa";
+import { createExpense, updateExpense, deleteExpense, approveExpense, rejectExpense } from "@/server/kassa/expenses";
 import { createAvansPayout, createPayout } from "@/server/payouts";
 import { BreadcrumbTrail } from "@/components/BreadcrumbTrail";
 import { sectionCrumbs, sectionMeta } from "@/lib/navigation";

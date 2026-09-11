@@ -20,7 +20,7 @@ vi.mock("server-only", () => ({}));
 
 const { prisma } = await import("@/lib/prisma");
 const { closeMonth, reopenMonth, validateMonth, getMonthSummaryData } = await import("@/server/monthClosing");
-const { createKassaEntry } = await import("@/server/kassa");
+const { createKassaEntry } = await import("@/server/kassa/entries");
 const { ACCOUNTS, postLedger } = await import("@/lib/ledger");
 
 /**
